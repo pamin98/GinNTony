@@ -12,52 +12,52 @@ let digit  = ['0'-'9']
 let letter = ['a'-'z']
 let white  = [' ' '\t' '\r' '\n']
 
-let var =['a'-'z' 'A'-'Z']+['a'-'z' 'A'-'Z' '0'-'9' '_' '?']
+let var = ['a'-'z' 'A'-'Z']+['a'-'z' 'A'-'Z' '0'-'9' '_' '?']*
 
 rule lexer = parse
-    "and"  { T_and }
-  | "end"    { T_end }
+    "and"     { T_and }
+  | "end"     { T_end }
   | "list"    { T_list }
   | "ref"     { T_ref }
-  | "bool"  { T_bool }
+  | "bool"    { T_bool }
   | "exit"    { T_exit }
   | "mod"     { T_mod }
-  | "return"   { T_return }
+  | "return"  { T_return }
   | "char"    { T_char }
-  | "false"    { T_false }
+  | "false"   { T_false }
   | "new"     { T_new }
-  | "skip"  { T_skip }
+  | "skip"    { T_skip }
   | "decl"    { T_decl }
   | "for"     { T_for }
-  | "nil"   { T_nil }
+  | "nil"     { T_nil }
   | "tail"    { T_tail }
-  | "def"    { T_def }
-  | "head"     { T_head }
-  | "nil?"  { T_nilq }
+  | "def"     { T_def }
+  | "head"    { T_head }
+  | "nil?"    { T_nilq }
   | "true"    { T_true }
-  | "else"     { T_else }
-  | "if"   { T_if }
-  | "not"  { T_not }
-  | "elsif"    { T_elsif }
+  | "else"    { T_else }
+  | "if"      { T_if }
+  | "not"     { T_not }
+  | "elsif"   { T_elsif }
   | "int"     { T_int }
-  | "or"   { T_or }
+  | "or"      { T_or }
 
 
-  | digit+   { T_const }
-  | var   { T_var }
+  | digit+    { T_const }
+  | var       { T_var }
 
-  | '='      { T_eq }
-  | '('      { T_lparen }
-  | ')'      { T_rparen }
-  | '+'      { T_plus }
-  | '-'      { T_minus }
-  | '*'      { T_times }
+  | '='       { T_eq }
+  | '('       { T_lparen }
+  | ')'       { T_rparen }
+  | '+'       { T_plus }
+  | '-'       { T_minus }
+  | '*'       { T_times }
 
-  | white+               { lexer lexbuf }
+  | white+    { lexer lexbuf }
   (* thelei parapanw \ apo katw *)
   | "'" [^ '\n']* "\n"   { lexer lexbuf } 
 
-  |  eof          { T_eof }
+  |  eof      { T_eof }
   |  _ as chr     { 
       Printf.eprintf "invalid character: '%c' (ascii: %d)"
       chr (Char.code chr);
