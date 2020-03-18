@@ -4,15 +4,20 @@ type token =
   | T_return | T_char | T_false | T_new | T_skip | T_decl | T_for
   | T_nil | T_tail | T_def | T_head | T_nilq | T_true | T_else | T_if
   | T_not | T_elsif | T_int | T_or | T_const | T_var | T_eq 
-  | T_lparen | T_rparen | T_plus | T_minus | T_times | T_eof
+  | T_lparen | T_rparen | T_plus | T_minus | T_times | T_eof | T_assign
+  | T_lbracket | T_rbracket | T_ge | T_gr | T_lt | T_le | T_neq | T_comma | T_semicolon | T_colon | T_constChar | T_constStr
 }
 
 
-let digit  = ['0'-'9']
-let letter = ['a'-'z']
-let white  = [' ' '\t' '\r' '\n']
 
+let digit  = ['0'-'9']
+let white  = [' ' '\t' '\r' '\n']
 let var = ['a'-'z' 'A'-'Z']+['a'-'z' 'A'-'Z' '0'-'9' '_' '?']*
+(*  na ftia3oume const char  *)
+let chr =  '\'' [ 'a'-'z'  ]* '\''
+
+let str =  '"'  [ ' '-'~' ]+ '"'
+
 
 rule lexer = parse
     "and"     { T_and }
@@ -46,12 +51,29 @@ rule lexer = parse
   | digit+    { T_const }
   | var       { T_var }
 
+  | chr       { T_constChar }
+  | str       { T_constStr }
+
   | '='       { T_eq }
+  | ">="      { T_ge }
+  | ">"      { T_gr }
+  | "<="      { T_le }
+  | "<"      { T_lt }
+  | ">="      { T_ge }
+  | "<>"      { T_neq }
+
+  | ":="      { T_assign}
   | '('       { T_lparen }
   | ')'       { T_rparen }
   | '+'       { T_plus }
   | '-'       { T_minus }
   | '*'       { T_times }
+  | '['       { T_lbracket }
+  | ']'       { T_rbracket }
+  | ':'       { T_colon }
+  | ';'       { T_semicolon }
+  | ','       { T_comma }
+
 
   | white+    { lexer lexbuf }
   (* thelei parapanw \ apo katw *)
@@ -67,41 +89,54 @@ rule lexer = parse
 {
   let string_of_token token =
     match token with
-      | T_and     -> "T_and"
-      | T_end     -> "T_end" 
-      | T_list    -> "T_list"
-      | T_ref     -> "T_ref"
-      | T_bool    -> "T_bool"
-      | T_exit    -> "T_exit"
-      | T_mod     -> "T_mod"  
-      | T_return  -> "T_return"
-      | T_char    -> "T_char"
-      | T_false   -> "T_false"
-      | T_new     -> "T_new"
-      | T_skip    -> "T_skip"
-      | T_decl    -> "T_decl"  
-      | T_for     -> "T_for"
-      | T_nil     -> "T_nil"
-      | T_tail    -> "T_tail"
-      | T_def     -> "T_def"
-      | T_head    -> "T_head"
-      | T_nilq    -> "T_nilq"
-      | T_true    -> "T_true"
-      | T_else    -> "T_else"
-      | T_if      -> "T_if"
-      | T_not     -> "T_not"
-      | T_elsif   -> "T_elsif"
-      | T_int     -> "T_int"
-      | T_or      -> "T_or"
-      | T_const   -> "T_const" 
-      | T_var     -> "T_var" 
-      | T_eq      -> "T_eq" 
-      | T_lparen  -> "T_lparen" 
-      | T_rparen  -> "T_rparen" 
-      | T_plus    -> "T_plus" 
-      | T_minus   -> "T_minus" 
-      | T_times   -> "T_times" 
-      | T_eof     -> "T_eof" 
+      | T_and       -> "T_and"
+      | T_end       -> "T_end" 
+      | T_list      -> "T_list"
+      | T_ref       -> "T_ref"
+      | T_bool      -> "T_bool"
+      | T_exit      -> "T_exit"
+      | T_mod       -> "T_mod"  
+      | T_return    -> "T_return"
+      | T_char      -> "T_char"
+      | T_false     -> "T_false"
+      | T_new       -> "T_new"
+      | T_skip      -> "T_skip"
+      | T_decl      -> "T_decl"  
+      | T_for       -> "T_for"
+      | T_nil       -> "T_nil"
+      | T_tail      -> "T_tail"
+      | T_def       -> "T_def"
+      | T_head      -> "T_head"
+      | T_nilq      -> "T_nilq"
+      | T_true      -> "T_true"
+      | T_else      -> "T_else"
+      | T_if        -> "T_if"
+      | T_not       -> "T_not"
+      | T_elsif     -> "T_elsif"
+      | T_int       -> "T_int"
+      | T_or        -> "T_or"
+      | T_const     -> "T_const" 
+      | T_var       -> "T_var" 
+      | T_eq        -> "T_eq" 
+      | T_lparen    -> "T_lparen" 
+      | T_rparen    -> "T_rparen" 
+      | T_plus      -> "T_plus" 
+      | T_minus     -> "T_minus" 
+      | T_times     -> "T_times" 
+      | T_eof       -> "T_eof" 
+      | T_assign    -> "T_assign"
+      | T_lbracket  -> "T_lbracket" 
+      | T_rbracket  -> "T_rbracket"
+      | T_ge        -> "T_ge"
+      | T_gr        -> "T_gr"
+      | T_lt        -> "T_lt"
+      | T_le        -> "T_le"
+      | T_neq       -> "T_neq"
+      | T_comma     -> "T_comma"
+      | T_semicolon -> "T_semicolon"
+      | T_colon     -> "T_colon"
+      | T_constChar -> "T_constChar"
+      | T_constStr  -> "T_constStr"
 
 
   let main = 
