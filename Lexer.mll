@@ -16,7 +16,7 @@ let var = ['a'-'z' 'A'-'Z']+['a'-'z' 'A'-'Z' '0'-'9' '_' '?']*
 (*  na ftia3oume const char  *)
 let chr =  '\'' [ 'a'-'z'  ]* '\''
 
-let str =  '"'  [ ' '-'~' ]+ '"'
+let str =  '"' [ 'a'-'z' ]+ '"'
 
 
 rule lexer = parse
@@ -77,7 +77,10 @@ rule lexer = parse
 
   | white+    { lexer lexbuf }
   (* thelei parapanw \ apo katw *)
-  | "'" [^ '\n']* "\n"   { lexer lexbuf } 
+  (********************************************
+    GIA KAPOIO LOGO MATCHAREI EDW
+    *******************************************)
+ (* | "'" [^ '\n']* "\n"   { lexer lexbuf } *) 
 
   |  eof      { T_eof }
   |  _ as chr     { 
