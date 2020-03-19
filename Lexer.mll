@@ -21,11 +21,11 @@ let chr =  ('\'' ([ 'a'-'z' 'A'-'Z' ]|digit) '\'')
           | "\'\\0\'" | "\'\\\\\'"| "\'\\\'\'"
           | "\'\\\"\'"| ("\'\\x" (hexDigit)(hexDigit) '\'')
 
-let str =  '"' [ ' '-'~' ]+ '"'
+(* Fix bug here *)
+let str =  '"' ([ ' '-'!' '#'-'~' ]|"\\\"")+ '"' 
 
 let lineComment = '%' [' '-'~']* '\n'
 let multilineCommHelper = "<*" ([ ' '-'~']| '\n' | '\r' | '\t')* "*>"
-let lessNoComm = '<' [' '-')' '+'-'~']
 let multNoComm = [' '-';' '='-'~'] '*' [ ' '-'=' '?'-'~']
 let multilineComm = "<*" (multilineCommHelper 
                           | [ ' '-')' '+'-'~'] 
