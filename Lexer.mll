@@ -6,18 +6,31 @@ type token =
   | T_not | T_elsif | T_int | T_or | T_const | T_var | T_eq 
   | T_lparen | T_rparen | T_plus | T_minus | T_times | T_eof | T_assign
   | T_lbracket | T_rbracket | T_ge | T_gr | T_lt | T_le | T_neq | T_comma | T_semicolon | T_colon | T_constChar | T_constStr
+  | T_lineComm | T_multilineComm
 }
 
 
 
 let digit  = ['0'-'9']
+let hexDigit = ['0'-'9' 'A'-'F' 'a'-'f']
 let white  = [' ' '\t' '\r' '\n']
-let var = ['a'-'z' 'A'-'Z']+['a'-'z' 'A'-'Z' '0'-'9' '_' '?']*
-(*  na ftia3oume const char  *)
-let chr =  '\'' [ 'a'-'z'  ]* '\''
+let var = ['a'-'z' 'A'-'Z']['a'-'z' 'A'-'Z' '0'-'9' '_' '?']*
 
-let str =  '"' [ 'a'-'z' ]+ '"'
+let chr =  ('\'' ([ 'a'-'z' 'A'-'Z' ]|digit) '\'')
+          | "\'\\n\'" | "\'\\r\'" | "\'\\t\'"
+          | "\'\\0\'" | "\'\\\\\'"| "\'\\\'\'"
+          | "\'\\\"\'"| ("\'\\x" (hexDigit)(hexDigit) '\'')
 
+let str =  '"' [ ' '-'~' ]+ '"'
+
+let lineComment = '%' [' '-'~']* '\n'
+let multilineCommHelper = "<*" ([ ' '-'~']| '\n' | '\r' | '\t')* "*>"
+let lessNoComm = '<' [' '-')' '+'-'~']
+let multNoComm = [' '-';' '='-'~'] '*' [ ' '-'=' '?'-'~']
+let multilineComm = "<*" (multilineCommHelper 
+                          | [ ' '-')' '+'-'~'] 
+                          | multNoComm
+                          |'\n' | '\r' | '\t' )* "*>"
 
 rule lexer = parse
     "and"     { T_and }
@@ -54,6 +67,9 @@ rule lexer = parse
   | chr       { T_constChar }
   | str       { T_constStr }
 
+  | lineComment     { T_lineComm }
+  | multilineComm { T_multilineComm }
+
   | '='       { T_eq }
   | ">="      { T_ge }
   | ">"      { T_gr }
@@ -74,14 +90,8 @@ rule lexer = parse
   | ';'       { T_semicolon }
   | ','       { T_comma }
 
-
+  
   | white+    { lexer lexbuf }
-  (* thelei parapanw \ apo katw *)
-  (********************************************
-    GIA KAPOIO LOGO MATCHAREI EDW
-    *******************************************)
- (* | "'" [^ '\n']* "\n"   { lexer lexbuf } *) 
-
   |  eof      { T_eof }
   |  _ as chr     { 
       Printf.eprintf "invalid character: '%c' (ascii: %d)"
@@ -140,6 +150,8 @@ rule lexer = parse
       | T_colon     -> "T_colon"
       | T_constChar -> "T_constChar"
       | T_constStr  -> "T_constStr"
+      | T_lineComm   -> "T_lineComm"
+      | T_multilineComm -> "T_multilineComm"
 
 
   let main = 
