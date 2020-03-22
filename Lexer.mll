@@ -6,7 +6,6 @@ type token =
   | T_not | T_elsif | T_int | T_or | T_const | T_var | T_eq 
   | T_lparen | T_rparen | T_plus | T_minus | T_times | T_eof | T_assign
   | T_lbracket | T_rbracket | T_ge | T_gr | T_lt | T_le | T_neq | T_comma | T_semicolon | T_colon | T_constChar | T_constStr
-  | T_lineComm | T_multilineComm
 }
 
 
@@ -21,17 +20,18 @@ let chr =  ('\'' ([ 'a'-'z' 'A'-'Z' ]|digit) '\'')
           | "\'\\0\'" | "\'\\\\\'"| "\'\\\'\'"
           | "\'\\\"\'"| ("\'\\x" (hexDigit)(hexDigit) '\'')
 
-(* Fix bug here *)
 let str =  '"' ([ ' '-'!' '#'-'~' ]|"\\\"")+ '"' 
 
 let lineComment = '%' [' '-'~']* '\n'
+(*
+ * Goodbye, old friend. You deserved better. :(
 let multilineCommHelper = "<*" ([ ' '-'~']| '\n' | '\r' | '\t')* "*>"
 let multNoComm = [' '-';' '='-'~'] '*' [ ' '-'=' '?'-'~']
 let multilineComm = "<*" (multilineCommHelper 
                           | [ ' '-')' '+'-'~'] 
                           | multNoComm
                           |'\n' | '\r' | '\t' )* "*>"
-
+*)
 rule lexer = parse
     "and"     { T_and }
   | "end"     { T_end }
@@ -67,8 +67,9 @@ rule lexer = parse
   | chr       { T_constChar }
   | str       { T_constStr }
 
-  | lineComment     { T_lineComm }
-  | multilineComm { T_multilineComm }
+  | lineComment     { lexer lexbuf }
+  | "<*"	  { comments 0 lexbuf }
+  (*| multilineComm { T_multilineComm }*)
 
   | '='       { T_eq }
   | ">="      { T_ge }
@@ -98,6 +99,15 @@ rule lexer = parse
       chr (Char.code chr);
       lexer lexbuf 
       }
+
+and comments level = parse
+	| "*>" 	{
+				if level = 0 then lexer lexbuf
+				else comments (level-1) lexbuf
+			}
+	| "<*" 	{ comments (level+1) lexbuf }
+	| _ 	{ comments level lexbuf }
+	| eof 	{ T_eof }
 
 {
   let string_of_token token =
@@ -150,8 +160,6 @@ rule lexer = parse
       | T_colon     -> "T_colon"
       | T_constChar -> "T_constChar"
       | T_constStr  -> "T_constStr"
-      | T_lineComm   -> "T_lineComm"
-      | T_multilineComm -> "T_multilineComm"
 
 
   let main = 
