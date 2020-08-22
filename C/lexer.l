@@ -4,9 +4,9 @@
 
 #define T_eof	0
 
-int  linecount=1;
+int  line_counter=1;
 char lastWhitespace=' ';
-int  nesting;
+int  nest_counter=0;
 
 int		fixChar		(char * str, int * shift);
 int		fixHex		(char * str);
@@ -90,37 +90,37 @@ ESCAPE \\(n|t|r|0|\\|\'|\"|x{HEX}{HEX})
 "elsif"		{ return T_elsif; }
 
 
-{L}({L}|{D}|_|\?)*	{ yylval.name=strdup(yytext); return T_id;}
+{L}({L}|{D}|_|\?)*			{ yylval.name=strdup(yytext); return T_id;}
 
-{D}+				{ yylval.val=atoi(yytext); return T_int_const; }
+{D}+						{ yylval.val=atoi(yytext); return T_int_const; }
 
 \"([^\n\"\'\\]|{ESCAPE})*\" { yylval.name = strdup(yytext); return T_string; }
 
 \'([^\"\'\\]|{ESCAPE})\'	{ yylval.val=fixChar(yytext+1,NULL); return T_char_const; /*first of yytext is ' so it is not passed*/ } 
  
-[+|\-|*|/|#|=|<|>]	{ return yytext[0]; }
-"<="				{ return T_le;	}
-">="				{ return T_ge;}
-"<>"				{ return T_ne;}
+[+|\-|*|/|#|=|<|>]			{ return yytext[0]; }
+"<="						{ return T_le;	}
+">="						{ return T_ge;}
+"<>"						{ return T_ne;}
 
-[\(|\)|\[|\]|,|;|:]	{ return yytext[0]; }
-":="				{ return T_assign; }
+[\(|\)|\[|\]|,|;|:]			{ return yytext[0]; }
+":="						{ return T_assign; }
 
-%[^\n]*\n			{ /* nothing */ linecount++; }
+%[^\n]*\n					{ /* nothing */ line_counter++; }
 
-"<*"				{ nesting=1;  BEGIN(COMMENT);}
-<COMMENT>"<*"		{ nesting++; }
-<COMMENT>"*>"		{ nesting--; if(nesting==0) BEGIN(INITIAL); }
-<COMMENT>"\n"		{ linecount++; }
-<COMMENT>"*"		{ /* nothing */ }
-<COMMENT>[^*\n]		{ /* nothing */ }
+"<*"						{ nest_counter=0=1;  BEGIN(COMMENT);}
+<COMMENT>"<*"				{ nest_counter=0++; }
+<COMMENT>"*>"				{ nest_counter=0--; if(nest_counter=0==0) BEGIN(INITIAL); }
+<COMMENT>"\n"				{ line_counter++; }
+<COMMENT>"*"				{ /* nothing */ }
+<COMMENT>[^*\n]				{ /* nothing */ }
 
-{W}					{ lastWhitespace=yytext[0]; }
-\n					{ linecount++; lastWhitespace='\n'; }
+{W}							{ lastWhitespace=yytext[0]; }
+\n							{ line_counter++; lastWhitespace='\n'; }
 
-<<EOF>>				{ return T_eof; }
+<<EOF>>						{ return T_eof; }
 
-.					{ yyerror("char not recognised"); } 
+.							{ yyerror("char not recognised"); } 
 
 %%
 
