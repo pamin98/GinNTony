@@ -34,6 +34,25 @@
 #define		T_neq			1032
 #define		T_constChar		1033
 #define		T_constString	1034
+//-----
+#define		T_colon			1035
+#define		T_lparen		1036
+#define		T_rparen		1037
+#define		T_lbracket		1038
+#define		T_rbracket		1039
+#define		T_semicolon		1040
+#define		T_comma			1041
+#define		T_plus			1042
+#define 	T_minus			1043
+#define		T_multiply		1044
+#define		T_divide		1045
+
+#define		T_eq			1046
+#define		T_greater		1047
+#define		T_less			1048
+#define		T_listadd		1049
+
+
 
 int lineno = 1;
 int commentLevel = 0;
@@ -79,6 +98,23 @@ H 		\\x{HD}{HD}
 "<="						{ return T_le; }
 ">="						{ return T_ge; }
 "<>"						{ return T_neq; }
+"="							{ return T_eq; }
+">"							{ return T_greater; }
+"<"							{ return T_less; }
+
+":"							{ return T_colon; }
+"("							{ return T_lparen; }
+")"							{ return T_rparen; }
+"["							{ return T_lbracket; }
+"]"							{ return T_rbracket; }
+";"							{ return T_semicolon; }
+","							{ return T_comma; }
+"+"							{ return T_plus; }
+"-"							{ return T_minus; }
+"*"							{ return T_multiply; }
+"/"							{ return T_divide; }
+"#"							{ return T_listadd}
+
 
 {L}({L}|{D}|_|\?)*			{ return T_var; }
 {D}+						{ return T_constInt; }

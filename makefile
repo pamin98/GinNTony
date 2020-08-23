@@ -1,32 +1,23 @@
-# OS type: Linux/Win DJGPP
+#OS Type: Linux/Win DJGPP
 ifdef OS
-   EXE=.exe
+	EXE=.EXE
 else
-   EXE=
+	EXE=
 endif
 
-OCAMLC_FLAGS=-g
-OCAMLC=ocamlc
+CFLAGS=-g
+CC=gcc
 
-%.cmo: %.ml %.mli
-	$(OCAMLC) $(OCAMLC_FLAGS) -c $<
+GinNTony$(EXE): lexer.o
+		$(CC) $(CFLAGS) -o $@ $^ -lfl
 
-%.cmi: %.mli
-	$(OCAMLC) $(OCAMLC_FLAGS) -c $<
-
-%.cmo %.cmi: %.ml
-	$(OCAMLC) $(OCAMLC_FLAGS) -c $<
-
-tony$(EXE): Lexer.cmo
-	$(OCAMLC) $(OCAMLC_FLAGS) -o $@ $^
-
-Lexer.ml: Lexer.mll
-	ocamllex -o $@ $<
+lexer.c: Lexer.l
+		flex -s -o $@ $<
 
 .PHONY: clean distclean
 
 clean:
-	$(RM) Lexer.ml *.cmo *.cmi *~
+		$(RM) lexer.c *.o *~
 
 distclean: clean
-	$(RM) tony$(EXE)
+		$(RM) GinNTony$(EXE)
