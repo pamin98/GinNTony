@@ -1,23 +1,25 @@
-#OS Type: Linux/Win DJGPP
-ifdef OS
-	EXE=.EXE
-else
-	EXE=
-endif
+.PHONY: clean distclean default
 
-CFLAGS=-g
-CC=gcc
+CXX=c++
+CXXFLAGS=-Wall
 
-GinNTony$(EXE): lexer.o
-		$(CC) $(CFLAGS) -o $@ $^ -lfl
+default: tony
 
-lexer.c: Lexer.l
-		flex -s -o $@ $<
+lexer.cpp: lexer.l
+	flex -s -o lexer.cpp lexer.l
 
-.PHONY: clean distclean
+lexer.o: lexer.cpp lexer.hpp parser.hpp
+
+parser.hpp parser.cpp: parser.y
+	bison -dv -o parser.cpp parser.y
+
+parser.o: parser.cpp lexer.hpp
+
+tony: lexer.o parser.o
+	$(CXX) $(CXXFLAGS) -o tony lexer.o parser.o
 
 clean:
-		$(RM) lexer.c *.o *~
+	$(RM) lexer.cpp parser.cpp parser.hpp parser.output *.o
 
 distclean: clean
-		$(RM) GinNTony$(EXE)
+	$(RM) tony

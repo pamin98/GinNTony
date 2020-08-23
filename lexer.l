@@ -122,8 +122,6 @@ H 		\\x{HD}{HD}
 \'([^\'\\\"]|{E}|{H})\'		{ return T_constChar; }
 \"([^\'\"\\\n]|{E}|{H})*\"	{ return T_constString; }
 
-[+\-*/#=<>]					{ return yytext[0]; }
-[\(\)\[\],;:]				{ return yytext[0]; }
 
 %[^\n]*\n 					{ lineno = lineno + 1; }
 

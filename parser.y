@@ -1,6 +1,9 @@
 %{
 #include <cstdio>
+#include "ast.hpp"
 #include "lexer.hpp"
+
+std::map<std::string, int> globals;
 %}
 
 %token T_and	"and"
@@ -49,47 +52,40 @@
 %token T_divide "/"
 %token T_listadd "#"
 
-%token<name> T_id
-%token<val>	T_int_const	
-%token<val> T_char_const
+%token<var> T_id
+%token<num>	T_int_const	
+%token<num> T_char_const
 %token<name> T_string
 
-%type<name> header
+// %type<name> header
 
-%type<type> type
+// %type<type> type
 
-%type<stmt> func_def
-%type<stmt> header
-%type<stmt> func_decl
-%type<stmt> var_def
-%type<stmt> stmt
+// %type<stmt> func_def
+// %type<stmt> func_decl
+// %type<stmt> var_def
+// %type<stmt> stmt
 
-%type<stmt> definition_list
-%type<stmt> type
-%type<stmt> formal
-%type<stmt> formal_list
-%type<stmt> simple
-%type<stmt> simple_list
-%type<stmt> elsif_list
+// %type<stmt> definition_list
+// %type<stmt> formal
+// %type<stmt> formal_list
+// %type<stmt> simple
+// %type<stmt> simple_list
+// %type<stmt> elsif_list
 
 
-%type<stmt> stmt_list
-%type<stmt> stmt_full
-%type<stmt> if_clause
-%type<stmt> for_clause
-%type<stmt> type
+// %type<stmt> stmt_list
 
-%type<stmt> expr_list
-%type<expr> expr
-%type<rval> rval
+// %type<stmt> expr_list
+// %type<expr> expr
 
-%type<atom> atom 
+// %type<atom> atom 
 
-%type<call> call
+// %type<call> call
 
-%type<stmt> plus_or_minus
-%type<stmt> arithmetic_operator
-%type<stmt> relational_operator
+// %type<stmt> plus_or_minus
+// %type<stmt> arithmetic_operator
+// %type<stmt> relational_operator
 
 
 %left "or"
@@ -101,6 +97,7 @@
 %left '*' '/' "mod"
 
 %expect 1
+
 
 %%
 
@@ -124,6 +121,11 @@ header:
 |   type T_id T_lparen formal_list T_rparen
 ;
 
+formal:
+	type id_list
+|	T_ref type id_list
+;
+
 formal_list:
     /* nothing */
 |   formal
@@ -135,7 +137,7 @@ type:
 |   T_bool
 |   T_char
 |   type T_lbracket T_rbracket
-|   list T_lbracket type T_rbracket
+|   T_list T_lbracket type T_rbracket
 ;
 
 func_decl:
