@@ -5,13 +5,9 @@
 #include <vector>
 #include <string>
 
-#include "ast.hpp"
 #include "lexer.hpp"
-
-
 %}
 
-%code requires { #include "ast.hpp" }
 
 %define parse.error verbose
 
@@ -60,22 +56,6 @@
 %left '*' '/' "mod"
 %nonassoc UPLUS UMINUS
 
-%union {
-	Block *block;
-	Stmt *stmt;
-	Expr *expr;
-	If *ifClass;
-	char var;
-	int num;
-	char op;
-}
-
-%type<ifClass> elsif_list
-%type<block> stmt_list
-%type<block> else
-%type<stmt> stmt
-%type<expr> expr
-
 
 %%
 
@@ -95,8 +75,8 @@ definition_list:
 		;
 
 stmt_list:
-		/* nothing */		{ $$ = new Block(); }
-		|	stmt stmt_list	{ $2->append($1); $$=$2; }
+		/* nothing */
+		|	stmt stmt_list
 		;
 
 header:
@@ -144,18 +124,18 @@ stmt:
 		  simple
 		| "exit"
 		| "return" expr
-		| "if" expr ':' stmt_list elsif_list else "end"		{ $$ = new If($2,$4,$5); }	
+		| "if" expr ':' stmt_list elsif_list else "end"
 		| "for" simple_list ';' expr ';' simple_list ':' stmt_list "end"
 		;
 
 elsif_list:
-		/* nothing */	{ $$ = NULL; }
-		|	"elsif" expr ':' stmt_list elsif_list	{ $$ = new If($2,$4,$5); }
+		/* nothing */
+		|	"elsif" expr ':' stmt_list elsif_list
 		;
 
 else:
 		/* nothing */
-		| "else" ':' stmt_list	{	$$ = $3;	}
+		| "else" ':' stmt_list
 		;
 
 simple:
@@ -197,11 +177,11 @@ expr:
 		| '(' expr ')'
 		| '+' expr %prec UPLUS
 		| '-' expr %prec UMINUS
-		| expr '+' expr				{ $$ = new BinOp($1,'+',$3); }
-		| expr '-' expr				{ $$ = new BinOp($1,'-',$3); }
-		| expr '*' expr				{ $$ = new BinOp($1,'*',$3); }
-		| expr '/' expr				{ $$ = new BinOp($1,'/',$3); }
-		| expr "mod" expr			{ $$ = new BinOp($1,'%',$3); }
+		| expr '+' expr
+		| expr '-' expr
+		| expr '*' expr
+		| expr '/' expr
+		| expr "mod" expr
 		| expr '=' expr
 		| expr '>' expr
 		| expr '<' expr
