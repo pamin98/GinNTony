@@ -1,0 +1,17 @@
+<* this is a
+multiline comment...
+PRAISE THE SUN *>
+<*This is
+another 	multiline comment
+<* that even has
+another multiline comment <* inside!!! *> 
+isn't it beautiful *> ? It sure is*>
+
+<* well this is kinda weird <<* isnt it?*>****>  
+
+<* this is a weird comment ***>
+
+<* this is a weird comment <<* isnt it *>*>
+
+int salvation := 42
+

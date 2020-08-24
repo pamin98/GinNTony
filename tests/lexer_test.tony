@@ -1,0 +1,57 @@
+def main():
+	puts("\n")
+	puts("-----------That is a test for Tony\'s lexer----------------\n\n")
+
+	puts("This is a string!(without newline)	")
+	puts("and this is a string(with newline)\n\n")
+
+	<*               this is a simple multiline comment
+					** ******************   
+
+	*>
+
+	<*   the multiline comments can also <* be nested *> 
+
+
+		<* <* you can add wathever inside *>
+
+			it also counts the lines *>
+
+	*>
+	
+	puts("and now lets print some characters\n")
+	putc('a')
+	puts("\n")
+	putc('1')
+	puts("\n")
+	putc('\n')
+	puts("\n")
+	putc('\t')
+	puts("\n")
+	putc('\r')
+	puts("\n")
+	putc('\0')
+	puts("\n")
+	putc('\\')
+	puts("\n")
+	putc('\'')
+	puts("\n")
+	putc('\"')
+	puts("\n")
+	putc('\xff')
+	puts("\n")
+	putc('\x1d')
+	puts("\n\n")
+
+	% and a one-line-comment
+
+	puts("and some integers\n")
+	puti(17)
+	puts("\n")
+	puti(42)
+	puts("\n")
+	puti(2147483647)
+	puts("	max integer -> (2^31)-1\n")
+
+
+end
