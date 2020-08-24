@@ -108,11 +108,14 @@
 
 %left T_or
 %left T_and
-%nonassoc T_not	
+%nonassoc T_not
 %nonassoc T_eq T_neq T_greater T_less T_ge T_le
 %right T_listadd
 %left T_plus T_minus
 %left T_multiply T_divide T_mod
+%nonassoc UMINUS UPLUS
+
+
 
 
 
@@ -224,15 +227,15 @@ atom:
 ;
 
 
-
-
 expr:
 	atom
 |	T_constInt
 |	T_constChar
 |	T_lparen expr T_rparen
-|	T_plus expr
-|	T_minus expr
+
+|	T_plus expr %prec UPLUS
+|	T_minus expr %prec UMINUS
+
 |	expr T_plus expr
 |	expr T_minus expr
 |	expr T_multiply expr

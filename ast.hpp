@@ -127,12 +127,11 @@ private:
 class If : public Stmt
 {
 public:
-	If(Expr *c, Stmt *s1, Stmt *s2 = nullptr) : cond(c), stmt1(s1), stmt2(s2) {}
+	If(Expr *c, Stmt *s1,pinaka) : cond(c), stmt1(s1) {}
 	~If()
 	{
 		delete cond;
 		delete stmt1;
-		delete stmt2;
 	}
 	virtual void printOn(std::ostream &out) const override
 	{
@@ -145,8 +144,6 @@ public:
 	{
 		if (cond->eval())
 			stmt1->run();
-		else if (stmt2 != nullptr)
-			stmt2->run();
 	}
 
 private:
@@ -173,7 +170,6 @@ public:
 		for (int times = expr->eval(), i = 0; i < times; ++i)
 			stmt->run();
 	}
-
 private:
 	Expr *expr;
 	Stmt *stmt;
