@@ -1,10 +1,11 @@
 %{
 #include <cstdio>
-#include "ast.hpp"
 #include "lexer.hpp"
-
-std::map<std::string, int> globals;
+#include "parser.hpp"
 %}
+
+
+
 %define parse.error verbose
 
 // %union {
@@ -64,10 +65,10 @@ std::map<std::string, int> globals;
 %token T_divide "/"
 %token T_listadd "#"
 
-%token	T_id
-%token	T_int_const	
-%token	T_char_const
-%token	T_string
+%token	T_var
+%token	T_constInt
+%token	T_constChar
+%token	T_constString
 
 
 // %type<block>	program stmt_list
@@ -120,7 +121,7 @@ std::map<std::string, int> globals;
 %%
 
 program:
-    func_def
+	func_def
 ;
 
 func_def:
@@ -135,8 +136,8 @@ definition_list:
 ;
 
 header:
-    T_id T_lparen formal_list T_rparen
-|   type T_id T_lparen formal_list T_rparen
+    T_var T_lparen formal_list T_rparen
+|   type T_var T_lparen formal_list T_rparen
 ;
 
 formal:
@@ -163,8 +164,8 @@ func_decl:
 ;
 
 id_list:
-    T_id T_comma id_list
-|	T_id
+    T_var T_comma id_list
+|	T_var
 ;
 
 var_def:
@@ -212,12 +213,12 @@ expr_list:
 ;
 
 call:
-	T_id T_lparen expr_list T_rparen
+	T_var T_lparen expr_list T_rparen
 ;
 
 atom:
-	T_id
-|	T_string
+	T_var
+|	T_constString
 |	atom T_lbracket expr T_rbracket
 |	call
 ;
@@ -227,8 +228,8 @@ atom:
 
 expr:
 	atom
-|	T_int_const
-|	T_char_const
+|	T_constInt
+|	T_constChar
 |	T_lparen expr T_rparen
 |	T_plus expr
 |	T_minus expr
