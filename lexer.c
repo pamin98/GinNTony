@@ -1,6 +1,6 @@
-#line 2 "lexer.cpp"
+#line 2 "lexer.c"
 
-#line 4 "lexer.cpp"
+#line 4 "lexer.c"
 
 #define  YY_INT_ALIGNED short int
 
@@ -601,9 +601,9 @@ char *yytext;
 
 int lineno = 1;
 int commentLevel = 0;
-#line 605 "lexer.cpp"
+#line 605 "lexer.c"
  
-#line 607 "lexer.cpp"
+#line 607 "lexer.c"
 
 #define INITIAL 0
 #define COMMENT 1
@@ -824,7 +824,7 @@ YY_DECL
 #line 71 "lexer.l"
 
 
-#line 828 "lexer.cpp"
+#line 828 "lexer.c"
 
 	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
 		{
@@ -1195,7 +1195,7 @@ YY_RULE_SETUP
 #line 142 "lexer.l"
 YY_FATAL_ERROR( "flex scanner jammed" );
 	YY_BREAK
-#line 1199 "lexer.cpp"
+#line 1199 "lexer.c"
 
 	case YY_END_OF_BUFFER:
 		{

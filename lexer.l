@@ -1,3 +1,5 @@
+%option noyywrap
+
 %{
 #define		T_eof			0
 #define		T_and			1001
@@ -113,7 +115,7 @@ H 		\\x{HD}{HD}
 "-"							{ return T_minus; }
 "*"							{ return T_multiply; }
 "/"							{ return T_divide; }
-"#"							{ return T_listadd}
+"#"							{ return T_listadd; }
 
 
 {L}({L}|{D}|_|\?)*			{ return T_var; }
@@ -139,10 +141,23 @@ H 		\\x{HD}{HD}
 .							{ fprintf(stderr, "Error: Found character %c with code %d in line %d.\n", yytext[0]>=32 ? yytext[0]:'?', yytext[0], lineno); exit(1); }
 %%
 
+
+
+#ifdef yyFlexLexer
 int main () {
-	int token;
-	do {
-		token = yylex();
-		printf("token=%d, lexeme=\"%s\"\n", token, yytext);
-	} while (token != T_eof );
+  yyFlexLexer lexer;
+  int token;
+  do {
+    token = lexer.yylex();
+    printf("token=%d, lexeme=\"%s\"\n", token, lexer.YYText());
+  } while (token != T_eof);
 }
+#else
+int main () {
+  int token;
+  do {
+    token = yylex();
+    printf("token=%d, lexeme=\"%s\"\n", token, yytext);
+  } while (token != T_eof);
+}
+#endif

@@ -5,6 +5,18 @@
 
 std::map<std::string, int> globals;
 %}
+%define parse.error verbose
+
+// %union {
+//   Block *block;
+//   Stmt *stmt;
+//   Expr *expr;
+//   char str[32];
+//   int num;
+//   char c;
+//   bool b;
+//   BinOp *op;
+// }
 
 %token T_and	"and"
 %token T_bool	"bool"
@@ -52,21 +64,26 @@ std::map<std::string, int> globals;
 %token T_divide "/"
 %token T_listadd "#"
 
-%token<var> T_id
-%token<num>	T_int_const	
-%token<num> T_char_const
-%token<name> T_string
+%token	T_id
+%token	T_int_const	
+%token	T_char_const
+%token	T_string
+
+
+// %type<block>	program stmt_list
+// %type<stmt>		stmt
+// %type<expr>		expr
+// %type<op>		arithmetic_operator
 
 // %type<name> header
 
 // %type<type> type
 
-// %type<stmt> func_def
 // %type<stmt> func_decl
 // %type<stmt> var_def
 // %type<stmt> stmt
 
-// %type<stmt> definition_list
+
 // %type<stmt> formal
 // %type<stmt> formal_list
 // %type<stmt> simple
@@ -88,15 +105,16 @@ std::map<std::string, int> globals;
 // %type<stmt> relational_operator
 
 
-%left "or"
-%left "and"
-%nonassoc "not"		
-%nonassoc '=' "<>" '<' '>' "<=" ">=" 
-%right '#'
-%left '+' '-'
-%left '*' '/' "mod"
+%left T_or
+%left T_and
+%nonassoc T_not	
+%nonassoc T_eq T_neq T_greater T_less T_ge T_le
+%right T_listadd
+%left T_plus T_minus
+%left T_multiply T_divide T_mod
 
-%expect 1
+
+
 
 
 %%
@@ -204,27 +222,7 @@ atom:
 |	call
 ;
 
-plus_or_minus:
-	T_plus
-|	T_minus
-;
 
-arithmetic_operator:
-	T_plus
-|	T_minus
-|	T_multiply
-|	T_divide
-|	T_mod
-;
-
-relational_operator:
-	T_eq
-|	T_neq
-|	T_greater
-|	T_less
-|	T_ge
-|	T_le
-;
 
 
 expr:
@@ -232,9 +230,21 @@ expr:
 |	T_int_const
 |	T_char_const
 |	T_lparen expr T_rparen
-|	plus_or_minus expr
-|	expr arithmetic_operator expr
-|	expr relational_operator expr
+|	T_plus expr
+|	T_minus expr
+|	expr T_plus expr
+|	expr T_minus expr
+|	expr T_multiply expr
+|	expr T_divide expr
+|	expr T_mod expr
+
+|	expr T_eq expr
+|	expr T_neq expr
+|	expr T_greater expr
+|	expr T_less expr
+|	expr T_ge expr
+|	expr T_le expr
+
 |	T_true
 |	T_false
 |	T_not expr
@@ -250,6 +260,12 @@ expr:
 
 
 %%
+
+void yyerror (const char * msg)
+{
+	fprintf(stderr,"error :  %s\n",msg);
+	exit(1);
+}
 
 int main() 
 {
