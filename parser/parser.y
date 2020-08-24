@@ -1,7 +1,18 @@
 %{
 #include <cstdio>
+#include <iostream>
+#include <map>
+#include <vector>
+#include <string>
+
+#include "ast.hpp"
 #include "lexer.hpp"
+
+
 %}
+
+%code requires { #include "ast.hpp" }
+
 %define parse.error verbose
 
 %token		T_and			"and"
@@ -39,6 +50,7 @@
 %token		T_constChar		
 %token		T_constString	
 
+
 %left "or"
 %left "and"
 %nonassoc "not"	
@@ -47,6 +59,23 @@
 %left '+' '-'
 %left '*' '/' "mod"
 %nonassoc UPLUS UMINUS
+
+%union {
+	Block *block;
+	Stmt *stmt;
+	Expr *expr;
+	If *ifClass;
+	char var;
+	int num;
+	char op;
+}
+
+%type<ifClass> elsif_list
+%type<block> stmt_list
+%type<block> else
+%type<stmt> stmt
+%type<expr> expr
+
 
 %%
 
@@ -66,8 +95,8 @@ definition_list:
 		;
 
 stmt_list:
-		  stmt
-		| stmt stmt_list
+		/* nothing */		{ $$ = new Block(); }
+		|	stmt stmt_list	{ $2->append($1); $$=$2; }
 		;
 
 header:
@@ -108,25 +137,25 @@ func_decl:
 		;
 
 var_def:
-		type var_list
+		type var_list			
 		;
 
 stmt:
 		  simple
 		| "exit"
 		| "return" expr
-		| "if" expr ':' stmt_list elsif_list else "end"
+		| "if" expr ':' stmt_list elsif_list else "end"		{ $$ = new If($2,$4,$5); }	
 		| "for" simple_list ';' expr ';' simple_list ':' stmt_list "end"
 		;
 
 elsif_list:
-		
-		| "elsif" expr ':' stmt_list elsif_list
+		/* nothing */	{ $$ = NULL; }
+		|	"elsif" expr ':' stmt_list elsif_list	{ $$ = new If($2,$4,$5); }
 		;
 
 else:
-		
-		| "else" ':' stmt_list
+		/* nothing */
+		| "else" ':' stmt_list	{	$$ = $3;	}
 		;
 
 simple:
@@ -168,11 +197,11 @@ expr:
 		| '(' expr ')'
 		| '+' expr %prec UPLUS
 		| '-' expr %prec UMINUS
-		| expr '+' expr
-		| expr '-' expr
-		| expr '*' expr
-		| expr '/' expr
-		| expr "mod" expr
+		| expr '+' expr				{ $$ = new BinOp($1,'+',$3); }
+		| expr '-' expr				{ $$ = new BinOp($1,'-',$3); }
+		| expr '*' expr				{ $$ = new BinOp($1,'*',$3); }
+		| expr '/' expr				{ $$ = new BinOp($1,'/',$3); }
+		| expr "mod" expr			{ $$ = new BinOp($1,'%',$3); }
 		| expr '=' expr
 		| expr '>' expr
 		| expr '<' expr

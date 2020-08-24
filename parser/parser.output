@@ -11,7 +11,7 @@ Grammar
     5                | func_decl definition_list
     6                | var_def definition_list
 
-    7 stmt_list: stmt
+    7 stmt_list: %empty
     8          | stmt stmt_list
 
     9 header: T_var '(' formal_list ')'
@@ -171,7 +171,7 @@ Nonterminals, with rules where they appear
     definition_list (57)
         on left: 3 4 5 6
         on right: 2 4 5 6
-    stmt_list (58)
+    stmt_list <block> (58)
         on left: 7 8
         on right: 2 8 29 30 32 34
     header (59)
@@ -198,13 +198,13 @@ Nonterminals, with rules where they appear
     var_def (66)
         on left: 25
         on right: 6
-    stmt (67)
+    stmt <stmt> (67)
         on left: 26 27 28 29 30
-        on right: 7 8
-    elsif_list (68)
+        on right: 8
+    elsif_list <ifClass> (68)
         on left: 31 32
         on right: 29 32
-    else (69)
+    else <block> (69)
         on left: 33 34
         on right: 29
     simple (70)
@@ -225,7 +225,7 @@ Nonterminals, with rules where they appear
     atom (75)
         on left: 45 46 47 48
         on right: 36 47 49
-    expr (76)
+    expr <expr> (76)
         on left: 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76
         on right: 28 29 30 32 36 42 44 47 52 53 54 55 56 57 58 59 60 61 62 63 64 65 68 69 70 71 73 74 75 76
 
@@ -484,6 +484,8 @@ State 24
     "if"           shift, and go to state 43
     T_var          shift, and go to state 44
     T_constString  shift, and go to state 45
+
+    $default  reduce using rule 7 (stmt_list)
 
     stmt_list  go to state 46
     stmt       go to state 47
@@ -748,8 +750,7 @@ State 46
 
 State 47
 
-    7 stmt_list: stmt .
-    8          | stmt . stmt_list
+    8 stmt_list: stmt . stmt_list
 
     "exit"         shift, and go to state 39
     "return"       shift, and go to state 40
@@ -1830,6 +1831,8 @@ State 109
     T_var          shift, and go to state 44
     T_constString  shift, and go to state 45
 
+    $default  reduce using rule 7 (stmt_list)
+
     stmt_list  go to state 135
     stmt       go to state 47
     simple     go to state 48
@@ -2839,6 +2842,8 @@ State 154
     T_var          shift, and go to state 44
     T_constString  shift, and go to state 45
 
+    $default  reduce using rule 7 (stmt_list)
+
     stmt_list  go to state 158
     stmt       go to state 47
     simple     go to state 48
@@ -2858,6 +2863,8 @@ State 155
     T_var          shift, and go to state 44
     T_constString  shift, and go to state 45
 
+    $default  reduce using rule 7 (stmt_list)
+
     stmt_list  go to state 159
     stmt       go to state 47
     simple     go to state 48
@@ -2876,6 +2883,8 @@ State 156
     "if"           shift, and go to state 43
     T_var          shift, and go to state 44
     T_constString  shift, and go to state 45
+
+    $default  reduce using rule 7 (stmt_list)
 
     stmt_list  go to state 160
     stmt       go to state 47

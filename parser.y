@@ -2,6 +2,9 @@
 #include <cstdio>
 #include "lexer.hpp"
 #include "parser.hpp"
+
+
+
 %}
 
 
@@ -189,7 +192,7 @@ stmt:
 	simple
 |	T_exit
 |	T_return expr
-|	T_if expr T_colon stmt_list elsif_list else T_end
+|	T_if expr T_colon stmt_list elsif_list else T_end {  }
 |	T_for simple_list T_semicolon expr T_semicolon simple_list T_colon stmt_list T_end
 ;
 

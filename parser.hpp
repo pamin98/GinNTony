@@ -97,7 +97,9 @@ extern int yydebug;
     T_var = 303,
     T_constInt = 304,
     T_constChar = 305,
-    T_constString = 306
+    T_constString = 306,
+    UMINUS = 307,
+    UPLUS = 308
   };
 #endif
 
