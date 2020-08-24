@@ -1,3 +1,0 @@
-def move (char[] source, target):
-    puts("Moving from ")
-end

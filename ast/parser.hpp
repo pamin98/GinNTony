@@ -43,6 +43,11 @@
 #if YYDEBUG
 extern int yydebug;
 #endif
+/* "%code requires" blocks.  */
+#line 14 "parser.y"
+ #include "ast.hpp" 
+
+#line 51 "parser.hpp"
 
 /* Token type.  */
 #ifndef YYTOKENTYPE
@@ -50,62 +55,62 @@ extern int yydebug;
   enum yytokentype
   {
     T_and = 258,
-    T_bool = 259,
-    T_char = 260,
-    T_decl = 261,
-    T_def = 262,
-    T_else = 263,
-    T_elsif = 264,
-    T_end = 265,
-    T_exit = 266,
+    T_end = 259,
+    T_list = 260,
+    T_ref = 261,
+    T_bool = 262,
+    T_exit = 263,
+    T_mod = 264,
+    T_return = 265,
+    T_char = 266,
     T_false = 267,
-    T_for = 268,
-    T_head = 269,
-    T_if = 270,
-    T_int = 271,
-    T_list = 272,
-    T_mod = 273,
-    T_new = 274,
-    T_nil = 275,
-    T_nilq = 276,
-    T_not = 277,
-    T_or = 278,
-    T_ref = 279,
-    T_return = 280,
-    T_skip = 281,
-    T_tail = 282,
-    T_true = 283,
-    T_le = 284,
+    T_true = 268,
+    T_new = 269,
+    T_skip = 270,
+    T_decl = 271,
+    T_for = 272,
+    T_nil = 273,
+    T_tail = 274,
+    T_head = 275,
+    T_def = 276,
+    T_nilq = 277,
+    T_if = 278,
+    T_else = 279,
+    T_elsif = 280,
+    T_not = 281,
+    T_int = 282,
+    T_or = 283,
+    T_assign = 284,
     T_ge = 285,
-    T_neq = 286,
-    T_eq = 287,
-    T_less = 288,
-    T_greater = 289,
-    T_assign = 290,
-    T_colon = 291,
-    T_lparen = 292,
-    T_rparen = 293,
-    T_lbracket = 294,
-    T_rbracket = 295,
-    T_semicolon = 296,
-    T_comma = 297,
-    T_plus = 298,
-    T_minus = 299,
-    T_multiply = 300,
-    T_divide = 301,
-    T_listadd = 302,
-    T_var = 303,
-    T_constInt = 304,
-    T_constChar = 305,
-    T_constString = 306,
-    UMINUS = 307,
-    UPLUS = 308
+    T_le = 286,
+    T_neq = 287,
+    T_constInt = 288,
+    T_var = 289,
+    T_constChar = 290,
+    T_constString = 291,
+    UPLUS = 292,
+    UMINUS = 293
   };
 #endif
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
-typedef int YYSTYPE;
+union YYSTYPE
+{
+#line 63 "parser.y"
+
+	Block *block;
+	Stmt *stmt;
+	Expr *expr;
+	If *ifClass;
+	char var;
+	int num;
+	char op;
+
+#line 111 "parser.hpp"
+
+};
+typedef union YYSTYPE YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define YYSTYPE_IS_DECLARED 1
 #endif

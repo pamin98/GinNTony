@@ -124,38 +124,6 @@ private:
 };
 
 
-class If : public Stmt
-{
-public:
-	If(Expr *c, Block *s, If *next=NULL) : cond(c), stmt_list(s), nextIf(next) {}
-	~If()
-	{
-		delete cond;
-		delete stmt_list;
-		delete nextIf;
-	}
-	virtual void printOn(std::ostream &out) const override
-	{
-		out << "If(" << *cond << ", " << *stmt_list << ")";
-	}
-	void append(If *i)
-	{
-		nextIf = i;
-	}
-	virtual void run() const override
-	{
-		if(cond->eval())
-			stmt_list->run();
-		else if(nextIf != NULL)
-			nextIf->run();
-	}
-
-private:
-	Expr *cond;
-	Block *stmt_list;
-	If *nextIf;
-};
-
 
 class For : public Stmt
 {
@@ -212,4 +180,38 @@ public:
 
 private:
 	std::vector<Stmt *> stmt_list;
+};
+
+
+
+class If : public Stmt
+{
+public:
+	If(Expr *c, Block *s, If *next=NULL) : cond(c), stmt_list(s), nextIf(next) {}
+	~If()
+	{
+		delete cond;
+		delete stmt_list;
+		delete nextIf;
+	}
+	virtual void printOn(std::ostream &out) const override
+	{
+		//out << "If(" << *cond << ", " << stmt_list->printOn(out) << ")";
+	}
+	void append(If *i)
+	{
+		nextIf = i;
+	}
+	virtual void run() const override
+	{
+		if(cond->eval())
+			stmt_list->run();
+		else if(nextIf != NULL)
+			nextIf->run();
+	}
+
+private:
+	Expr *cond;
+	Block *stmt_list;
+	If *nextIf;
 };

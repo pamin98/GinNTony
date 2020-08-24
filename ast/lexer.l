@@ -1,12 +1,11 @@
 %option noyywrap
-
 %{
+#include <cstdio>
+#include <cstdlib>
 #include "lexer.hpp"
 #include "parser.hpp"
 
-#define T_eof 0
-
-
+#define		T_eof			0
 
 int lineno = 1;
 int commentLevel = 0;
@@ -52,23 +51,6 @@ H 		\\x{HD}{HD}
 "<="						{ return T_le; }
 ">="						{ return T_ge; }
 "<>"						{ return T_neq; }
-"="							{ return T_eq; }
-">"							{ return T_greater; }
-"<"							{ return T_less; }
-
-":"							{ return T_colon; }
-"("							{ return T_lparen; }
-")"							{ return T_rparen; }
-"["							{ return T_lbracket; }
-"]"							{ return T_rbracket; }
-";"							{ return T_semicolon; }
-","							{ return T_comma; }
-"+"							{ return T_plus; }
-"-"							{ return T_minus; }
-"*"							{ return T_multiply; }
-"/"							{ return T_divide; }
-"#"							{ return T_listadd; }
-
 
 {L}({L}|{D}|_|\?)*			{ return T_var; }
 {D}+						{ return T_constInt; }
@@ -76,6 +58,8 @@ H 		\\x{HD}{HD}
 \'([^\'\\\"]|{E}|{H})\'		{ return T_constChar; }
 \"([^\'\"\\\n]|{E}|{H})*\"	{ return T_constString; }
 
+[+\-*/#=<>]					{ return yytext[0]; }
+[\(\)\[\],;:]				{ return yytext[0]; }
 
 %[^\n]*\n 					{ lineno = lineno + 1; }
 
@@ -92,3 +76,10 @@ H 		\\x{HD}{HD}
 <<EOF>>						{ return T_eof; }
 .							{ fprintf(stderr, "Error: Found character %c with code %d in line %d.\n", yytext[0]>=32 ? yytext[0]:'?', yytext[0], lineno); exit(1); }
 %%
+
+void yyerror (const char * msg)
+{
+	fprintf(stderr,"error :  %s\n",msg);
+	exit(1);
+}
+
