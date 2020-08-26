@@ -44,10 +44,12 @@
 extern int yydebug;
 #endif
 /* "%code requires" blocks.  */
-#line 14 "parser.y"
- #include "ast.hpp" 
+#line 17 "parser.y"
+ 
+	#include "ast.hpp" 	
+	#include <string>
 
-#line 51 "parser.hpp"
+#line 53 "parser.hpp"
 
 /* Token type.  */
 #ifndef YYTOKENTYPE
@@ -97,17 +99,24 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 63 "parser.y"
+#line 24 "parser.y"
 
-	Block *block;
+	StmtList *stmt_list;
 	Stmt *stmt;
 	Expr *expr;
 	If *ifClass;
-	char var;
+	For *forClass;
+	ExprList* expr_list;
+	CallObject *call_object;
+	Var *var;
+	std::string *type;
+
+	char chr;
 	int num;
 	char op;
+	const char *str;
 
-#line 111 "parser.hpp"
+#line 120 "parser.hpp"
 
 };
 typedef union YYSTYPE YYSTYPE;

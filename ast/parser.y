@@ -4,16 +4,39 @@
 #include <map>
 #include <vector>
 #include <string>
+#include <string.h>
 
 #include "ast.hpp"
 #include "lexer.hpp"
 
 
+
 %}
 
-%code requires { #include "ast.hpp" }
+%code requires 
+{ 
+	#include "ast.hpp" 	
+	#include <string>
+}
 
 %define parse.error verbose
+
+%union {
+	StmtList *stmt_list;
+	Stmt *stmt;
+	Expr *expr;
+	If *ifClass;
+	For *forClass;
+	ExprList* expr_list;
+	CallObject *call_object;
+	Var *var;
+	std::string *type;
+
+	char chr;
+	int num;
+	char op;
+	const char *str;
+}
 
 %token		T_and			"and"
 %token		T_end			"end"
@@ -45,10 +68,10 @@
 %token		T_ge			">="
 %token		T_le 			"<="
 %token		T_neq			"<>"
-%token  	T_constInt		
-%token		T_var
-%token		T_constChar		
-%token		T_constString	
+%token<num>  			T_constInt
+%token<var>				T_var
+%token<num>				T_constChar		
+%token<str>				T_constString	
 
 
 %left "or"
@@ -60,24 +83,18 @@
 %left '*' '/' "mod"
 %nonassoc UPLUS UMINUS
 
-%union {
-	Block *block;
-	Stmt *stmt;
-	Expr *expr;
-	If *ifClass;
-	char *str;
-
-
-	char chr;
-	int num;
-	char op;
-}
 
 %type<ifClass> elsif_list
-%type<block> stmt_list
-%type<block> else
+%type<stmt_list> stmt_list
+%type<ifClass> else
 %type<stmt> stmt
+%type<stmt> simple
 %type<expr> expr
+%type<expr> atom
+%type<expr_list> expr_list
+%type<expr_list> expr_tail
+%type<call_object> call
+%type<type> type
 
 
 %%
@@ -92,13 +109,13 @@ func_def:
 
 definition_list:
 		
-		| func_def definition_list
-		| func_decl definition_list
-		| var_def definition_list
-		;
+	| func_def definition_list
+	| func_decl definition_list
+	| var_def definition_list
+	;
 
 stmt_list:
-		/* nothing */		{ $$ = new Block(); }
+			stmt			{ $$ = new StmtList($1); }
 		|	stmt stmt_list	{ $2->append($1); $$=$2; }
 		;
 
@@ -119,20 +136,20 @@ formal_tail:
 
 formal:
 		  type var_list
-		| "ref" type var_list
-		;
+		| "ref" type var_list 
+		; 
 
 var_list:
-		  T_var
-		| T_var ',' var_list
+		  T_var 
+		| T_var ',' var_list 
 		; 
 
 type:
-		  "int"
-		| "bool"
-		| "char"
-		| type '[' ']'
-		| "list" '[' type ']'
+		  "int"					{ $$ = new std::string("int"); }
+		| "bool"				{ $$ = new std::string("bool"); }
+		| "char"				{ $$ = new std::string("char"); }
+		| type '[' ']'			{ $1->append("[]"); $$=$1; }
+		| "list" '[' type ']'	{ $$ = new std::string("list ["); $$->append($3->c_str()) ; $$->append("]"); };
 		;
 
 func_decl:
@@ -140,31 +157,32 @@ func_decl:
 		;
 
 var_def:
-		type var_list			
+		type var_list
 		;
+
 
 stmt:
 		  simple
-		| "exit"
-		| "return" expr
-		| "if" expr ':' stmt_list elsif_list else "end"		{ $$ = new If($2,$4,$5); }	
+		| "exit" { $$ = new ExitStmt(); }
+		| "return" expr { $$ = new ReturnStmt($2); }
+		| "if" expr ':' stmt_list elsif_list "end" { $$ = new If($2,$4,$5); }	
 		| "for" simple_list ';' expr ';' simple_list ':' stmt_list "end"
 		;
 
 elsif_list:
-		/* nothing */	{ $$ = NULL; }
+			else	{ $$ = $1; }
 		|	"elsif" expr ':' stmt_list elsif_list	{ $$ = new If($2,$4,$5); }
 		;
 
 else:
-		/* nothing */
-		| "else" ':' stmt_list	{	$$ = $3;	}
+		/* nothing */	{ $$ = NULL; }
+		| "else" ':' stmt_list	{	$$ = new If(NULL,$3,NULL);	}
 		;
 
 simple:
-		  "skip"
-		| atom ":=" expr
-		| call
+		  "skip"					{  }
+		| atom ":=" expr			{ $$ = new AssignStmt($1,$3); }
+		| call						{ $$ = $1; }
 		;
 
 simple_list:
@@ -173,61 +191,62 @@ simple_list:
 		;
 
 call:
-		T_var '(' expr_list ')'
+		T_var '(' expr_list ')' 	{ $$ = new CallObject($1,$3); }
 		;
 
 expr_list:
-		
-		| expr expr_tail
+		/* nothing */ 				{ $$ = new ExprList(); }
+		| expr expr_tail			{ $2->append($1); $2->reverse() ; $$ = $2; }
 		;
 
 expr_tail:
-		
-		| ',' expr expr_tail
+		 							{ $$ = new ExprList(); }
+		| ',' expr expr_tail		{ $3->append($2) ; $$ = $3; }
 		;
 
 atom:
-		  T_var
-		| T_constString
-		| atom '[' expr ']'
-		| call
+		  T_var						{ $$ = $1; }
+		| T_constString				{ $$ = new ConstString($1); }
+		| atom '[' expr ']'			{ $$ = new ArrayIndexing($1,$3); }		
+		| call						{ $$ = $1; }
 		;
 
 expr:
-		  atom
-		| T_constInt
-		| T_constChar
-		| '(' expr ')'
-		| '+' expr %prec UPLUS
-		| '-' expr %prec UMINUS
+		  atom						{ $$ = $1; }
+		| T_constInt				{ $$ = new Const($1); }
+		| T_constChar				{ $$ = new Const($1); }
+		| '(' expr ')'				{ $$ = $2; }
+		| '+' expr %prec UPLUS		{ $$ = new BinOp(NULL,'+',$2); }
+		| '-' expr %prec UMINUS		{ $$ = new BinOp(NULL,'-',$2); }
 		| expr '+' expr				{ $$ = new BinOp($1,'+',$3); }
 		| expr '-' expr				{ $$ = new BinOp($1,'-',$3); }
 		| expr '*' expr				{ $$ = new BinOp($1,'*',$3); }
 		| expr '/' expr				{ $$ = new BinOp($1,'/',$3); }
 		| expr "mod" expr			{ $$ = new BinOp($1,'%',$3); }
-		| expr '=' expr
-		| expr '>' expr
-		| expr '<' expr
-		| expr "<>" expr
-		| expr "<=" expr
-		| expr ">=" expr
-		| "true"
-		| "false"
-		| "not" expr
-		| expr "and" expr
-		| expr "or" expr
-		| "new" type '[' expr ']' 
-		| "nil"
-		| "nil?" '(' expr ')'
-		| expr '#' expr
-		| "head" '(' expr ')'
-		| "tail" '(' expr ')'
+		| expr '=' expr				{ $$ = new RelOp($1,eq,$3); }
+		| expr '>' expr				{ $$ = new RelOp($1,gt,$3); }
+		| expr '<' expr				{ $$ = new RelOp($1,lt,$3); }
+		| expr "<>" expr			{ $$ = new RelOp($1,neq,$3); }
+		| expr "<=" expr			{ $$ = new RelOp($1,le,$3); }
+		| expr ">=" expr			{ $$ = new RelOp($1,ge,$3); }
+		| "true"					{ $$ = new LogOp(TRUE); }
+		| "false"					{ $$ = new LogOp(FALSE); }
+		| "not" expr				{ $$ = new LogOp(NOT,NULL,$2); }
+		| expr "and" expr			{ $$ = new LogOp(AND,$1,$3); }
+		| expr "or" expr			{ $$ = new LogOp(OR,$1,$3); }
+		| "new" type '[' expr ']' 	{ $$ = new ArrayInit($2,$4); }
+		| "nil"						{ $$ = new ListOp(nil,NULL,NULL); }
+		| "nil?" '(' expr ')'		{ $$ = new ListOp(nilq,NULL,$3); }
+		| expr '#' expr				{ $$ = new ListOp(append,$1,$3); }
+		| "head" '(' expr ')'		{ $$ = new ListOp(head,NULL,$3); }
+		| "tail" '(' expr ')'		{ $$ = new ListOp(tail,NULL,$3); }
 		;
 
 %%
 
-int main() {
-  int result = yyparse();
-  if (result == 0) printf("Success.\n");
-  return result;
+int main() 
+{
+	int result = yyparse();
+	if (result == 0) printf("Success.\n");
+	return result;
 }
