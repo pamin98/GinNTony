@@ -65,7 +65,10 @@
 	Stmt *stmt;
 	Expr *expr;
 	If *ifClass;
-	char var;
+	char *str;
+
+
+	char chr;
 	int num;
 	char op;
 }

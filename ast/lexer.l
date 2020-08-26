@@ -2,6 +2,8 @@
 %{
 #include <cstdio>
 #include <cstdlib>
+#include <stdlib.h>
+#include <stdio.h>
 #include "lexer.hpp"
 #include "parser.hpp"
 
@@ -52,11 +54,11 @@ H 		\\x{HD}{HD}
 ">="						{ return T_ge; }
 "<>"						{ return T_neq; }
 
-{L}({L}|{D}|_|\?)*			{ return T_var; }
-{D}+						{ return T_constInt; }
+{L}({L}|{D}|_|\?)*			{ yylval.str = strdup(yytext);  return T_var; }
+{D}+						{ yylval.num = atoi(yytext);  return T_constInt; }
 
-\'([^\'\\\"]|{E}|{H})\'		{ return T_constChar; }
-\"([^\'\"\\\n]|{E}|{H})*\"	{ return T_constString; }
+\'([^\'\\\"]|{E}|{H})\'		{ yylval.chr = getChar(yytext); return T_constChar; }
+\"([^\'\"\\\n]|{E}|{H})*\"	{ yylval.str = strdup(yytext); return T_constString; }
 
 [+\-*/#=<>]					{ return yytext[0]; }
 [\(\)\[\],;:]				{ return yytext[0]; }
@@ -76,6 +78,29 @@ H 		\\x{HD}{HD}
 <<EOF>>						{ return T_eof; }
 .							{ fprintf(stderr, "Error: Found character %c with code %d in line %d.\n", yytext[0]>=32 ? yytext[0]:'?', yytext[0], lineno); exit(1); }
 %%
+
+
+int getChar( char *str)
+{
+	if(str[0]!='\\')
+		return str[0];
+	else
+		switch(str[1])
+		{
+			case 'n': return '\n';
+			case 't': return '\t';
+			case 'r': return '\r';
+			case '0': return '\0';
+			case '\\': return '\\';
+			case '\'': return '\'';
+			case '\"': return '\'';
+			case 'x': { return (int)strtol(str+2, NULL, 16); }
+			default:
+				printf("%c",str[1]);
+				exit(1);
+		}
+}
+
 
 void yyerror (const char * msg)
 {
