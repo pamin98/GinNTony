@@ -111,6 +111,26 @@ private:
 	std::string type;
 };
 
+class VarList : public Expr
+{
+public:
+	VarList(Var *v)
+	{
+		var_list.push_back(v);
+	}
+	void append(Var *v)
+	{
+		var_list.push_back(v);
+	}
+	virtual void printOn(std::ostream &out) const override
+	{
+		//out << "Id(" << type << " " << var << ")";
+	}
+
+private:
+	std::vector<Var *> var_list; 
+};
+
 class Const : public Expr
 {
 public:
@@ -217,21 +237,6 @@ private:
 	Expr *right;
 };
 
-class varDefinition : public Stmt
-{
-public:
-	varDefinition(std::string t, std::string v, Expr *e) : type(t), var(v), expr(e) {}
-	~varDefinition() { delete expr; }
-	virtual void printOn(std::ostream &out) const override
-	{
-		out << "Let(" << var << " = " << *expr << ")";
-	}
-
-private:
-	std::string type;
-	std::string var;
-	Expr *expr;
-};
 
 class StmtList : public Stmt
 {
@@ -428,3 +433,158 @@ private:
 	Expr *expr;
 };
 
+
+
+class Formal : public Stmt
+{
+public:
+	Formal(std::string *t, VarList *v, bool isRef=false) : type(t) , var_list(v), isRef(isRef) {}
+	~Formal() 
+	{
+		delete var_list; 
+		delete type;
+	}
+	virtual void printOn(std::ostream &out) const override
+	{
+		//out << "Let(" << var << " = " << *expr << ")";
+	}
+
+private:
+	std::string *type;
+	VarList *var_list;
+	bool isRef;
+};
+
+class FormalList : public Stmt
+{
+public:
+	FormalList()
+	{
+
+	}
+	~FormalList()
+	{
+
+	}
+	void append(Formal *f)
+	{
+		formal_list.push_back(f);
+	}
+	virtual void printOn(std::ostream &out) const override
+	{
+		//out << "Let(" << var << " = " << *expr << ")";
+	}
+
+private:
+	std::vector<Formal *> formal_list;
+};
+
+
+class Function
+{
+public:
+	Function(Var *v,FormalList *fl,std::string *t=NULL) : functionName(v), formal_list(fl) , type(t) {} 
+	~Function()
+	{
+		delete functionName;
+		delete formal_list;
+		delete type;
+	}
+private:
+	Var *functionName;
+	FormalList *formal_list;
+	std::string *type;
+};
+
+class Definition
+{
+
+};
+
+
+class VarDefinition : public Definition
+{
+public:
+	VarDefinition(std::string *t, VarList *v) : type(t), var_list(v) {}
+	~VarDefinition() 
+	{
+		delete var_list; 
+		delete type;
+	}
+
+private:
+	std::string *type;
+	VarList *var_list;
+};
+
+
+class DefinitionList
+{
+public:
+	DefinitionList() : definition_list() {}
+	~DefinitionList()
+	{
+
+	}
+	void append(Definition *d)
+	{
+		definition_list.push_back(d);
+	}
+private:
+	std::vector<Definition *> definition_list;
+};
+
+class Header
+{
+public:
+	Header(Var *v,FormalList *fl,std::string *t=NULL) : functionName(v), formal_list(fl) , type(t) {} 
+	~Header()
+	{
+		delete functionName;
+		delete formal_list;
+		delete type;
+	}
+private:
+	Var *functionName;
+	FormalList *formal_list;
+	std::string *type;
+};
+
+class FunctionDefinition : public Definition
+{
+public:
+	FunctionDefinition(Header *h,DefinitionList *dl=NULL, StmtList *sl=NULL) : header(h), def_list(dl), stmt_list(sl) {} 
+	~FunctionDefinition()
+	{
+		delete header;
+		delete def_list;
+		delete stmt_list;
+	}
+
+	void setDefinitionList(DefinitionList *dl)
+	{
+		def_list = dl;
+	}
+
+	void setStmtList(StmtList *sl)
+	{
+		stmt_list = sl;
+	}
+
+private:
+	Header *header;
+	DefinitionList *def_list;
+	StmtList *stmt_list;
+};
+
+class FunctionDeclaration : public Definition
+{
+public:
+	FunctionDeclaration(Header *h) : header(h) {} 
+	~FunctionDeclaration()
+	{
+		delete header;
+	}
+private:
+	Header *header;
+};

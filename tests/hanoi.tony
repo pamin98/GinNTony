@@ -6,6 +6,7 @@ def solve ():
 			puts("Moving from ") puts(source) puts(" to ") puts(target) puts(".\n")
 		end
 
+
 		if rings >= 1:
 			hanoi(rings-1, source, auxiliary, target)
 			move(source, target)

@@ -31,6 +31,14 @@
 	CallObject *call_object;
 	Var *var;
 	std::string *type;
+	VarList *var_list;
+	VarDefinition *var_definition;
+	Formal *formal;
+	FormalList *formal_list;
+	FunctionDefinition *func_def;
+	FunctionDeclaration *func_decl;
+	DefinitionList *def_list;
+	Header *header;
 
 	char chr;
 	int num;
@@ -96,6 +104,16 @@
 %type<call_object> call
 %type<type> type
 %type<stmt_list> simple_list
+%type<var_list> var_list
+%type<var_definition> var_def
+%type<formal> formal
+%type<formal_list> formal_list
+%type<formal_list> formal_tail
+%type<def_list> definition_list
+%type<func_def> func_def
+%type<func_decl> func_decl
+%type<header> header
+%type<func_def> program
 
 %%
 
@@ -104,14 +122,18 @@ program:
 		;
 
 func_def:
-		"def" header ':' definition_list stmt_list "end"
+		"def" header ':' definition_list stmt_list "end"	{ $$ = new FunctionDefinition($2,$4,$5); }
+		;
+
+func_decl:
+		"decl" header			{ $$ = new FunctionDeclaration($2); }
 		;
 
 definition_list:
-		
-	| func_def definition_list
-	| func_decl definition_list
-	| var_def definition_list
+									{ $$ = new DefinitionList(); }
+	| func_def definition_list		{ $2->append($1); $$=$2; }
+	| func_decl definition_list		{ $2->append($1); $$=$2; }
+	| var_def definition_list		{ $2->append($1); $$=$2; }
 	;
 
 stmt_list:
@@ -120,29 +142,29 @@ stmt_list:
 		;
 
 header:
-		  T_var '(' formal_list ')'
-		| type T_var '(' formal_list ')'
+		  T_var '(' formal_list ')'			{ $$ = new Header($1,$3); }
+		| type T_var '(' formal_list ')'	{ $$ = new Header($2,$4,$1); }
 		;
 
 formal_list:
-		
-		| formal formal_tail
+									{ $$ = new FormalList(); }
+		|	formal formal_tail		{ $2->append($1) ; $$ = $2; }
 		;
 
 formal_tail:
-		
-		| ';' formal formal_tail
+									{ $$ = new FormalList(); }
+		| ';' formal formal_tail	{ $3->append($2); $$ = $3; }
 		;
 
 formal:
-		  type var_list
-		| "ref" type var_list 
+		  type var_list			{ $$ = new Formal($1,$2); }
+		| "ref" type var_list 	{ $$ = new Formal($2,$3,true); }
 		; 
 
 var_list:
-		  T_var 
-		| T_var ',' var_list 
-		; 
+		T_var 					{ $$ = new VarList($1); }
+	|	T_var ',' var_list 		{ $3->append($1); $$ = $3; }
+	; 
 
 type:
 		  "int"					{ $$ = new std::string("int"); }
@@ -152,12 +174,9 @@ type:
 		| "list" '[' type ']'	{ $$ = new std::string("list ["); $$->append($3->c_str()) ; $$->append("]"); };
 		;
 
-func_decl:
-		"decl" header
-		;
 
 var_def:
-		type var_list
+		type var_list			{ $$ = new VarDefinition($1,$2); }
 		;
 
 
@@ -186,9 +205,9 @@ simple:
 		;
 
 simple_list:
-		  simple					{ $$ = new StmtList($1); }
-		| simple ',' simple_list	{ $3->append($1); $$ = $3; }
-		;
+		simple					{ $$ = new StmtList($1); }
+	|	simple ',' simple_list	{ $3->append($1); $$ = $3; }
+	;
 
 call:
 		T_var '(' expr_list ')' 	{ $$ = new CallObject($1,$3); }
