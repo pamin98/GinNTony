@@ -435,7 +435,7 @@ private:
 
 
 
-class Formal : public Stmt
+class Formal
 {
 public:
 	Formal(std::string *t, VarList *v, bool isRef=false) : type(t) , var_list(v), isRef(isRef) {}
@@ -444,10 +444,6 @@ public:
 		delete var_list; 
 		delete type;
 	}
-	virtual void printOn(std::ostream &out) const override
-	{
-		//out << "Let(" << var << " = " << *expr << ")";
-	}
 
 private:
 	std::string *type;
@@ -455,7 +451,7 @@ private:
 	bool isRef;
 };
 
-class FormalList : public Stmt
+class FormalList
 {
 public:
 	FormalList()
@@ -469,10 +465,6 @@ public:
 	void append(Formal *f)
 	{
 		formal_list.push_back(f);
-	}
-	virtual void printOn(std::ostream &out) const override
-	{
-		//out << "Let(" << var << " = " << *expr << ")";
 	}
 
 private:
