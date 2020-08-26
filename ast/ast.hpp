@@ -267,11 +267,13 @@ private:
 class For : public Stmt
 {
 public:
-	For(Expr *e, StmtList *s) : expr(e), stmt_list(s) {}
+	For( StmtList *s1 ,Expr *e, StmtList *s2 , StmtList *s3) : stmt_list1(s1) , expr(e) , stmt_list2(s2) , stmt_list3(s3) {}
 	~For()
 	{
 		delete expr;
-		delete stmt_list;
+		delete stmt_list1;
+		delete stmt_list2;
+		delete stmt_list3;
 	}
 	virtual void printOn(std::ostream &out) const override
 	{
@@ -280,7 +282,9 @@ public:
 
 private:
 	Expr *expr;
-	Stmt *stmt_list;
+	Stmt *stmt_list1;
+	Stmt *stmt_list2;
+	Stmt *stmt_list3;
 };
 
 class ExprList : public Expr

@@ -18,7 +18,7 @@ GinNTony: lexer.o parser.o
 	$(CXX) $(CXXFLAGS) -o GinNTony lexer.o parser.o
 
 clean:
-	$(RM) lexer.cpp parser.cpp parser.hpp parser.output *.o
+	$(RM) lexer.cpp parser.cpp parser.hpp parser.output *.o GinNTony
 
 distclean: clean
 	$(RM) GinNTony

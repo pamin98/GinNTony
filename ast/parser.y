@@ -95,7 +95,7 @@
 %type<expr_list> expr_tail
 %type<call_object> call
 %type<type> type
-
+%type<stmt_list> simple_list
 
 %%
 
@@ -162,11 +162,11 @@ var_def:
 
 
 stmt:
-		  simple
-		| "exit" { $$ = new ExitStmt(); }
-		| "return" expr { $$ = new ReturnStmt($2); }
-		| "if" expr ':' stmt_list elsif_list "end" { $$ = new If($2,$4,$5); }	
-		| "for" simple_list ';' expr ';' simple_list ':' stmt_list "end"
+		  simple															{ $$ = $1; }
+		| "exit" 															{ $$ = new ExitStmt(); }
+		| "return" expr 													{ $$ = new ReturnStmt($2); }
+		| "if" expr ':' stmt_list elsif_list "end" 							{ $$ = new If($2,$4,$5); }	
+		| "for" simple_list ';' expr ';' simple_list ':' stmt_list "end"	{ $$ = new For($2,$4,$6,$8); }
 		;
 
 elsif_list:
@@ -175,8 +175,8 @@ elsif_list:
 		;
 
 else:
-		/* nothing */	{ $$ = NULL; }
-		| "else" ':' stmt_list	{	$$ = new If(NULL,$3,NULL);	}
+		/* nothing */			{ $$ = NULL; }
+		| "else" ':' stmt_list	{ $$ = new If(NULL,$3,NULL); }
 		;
 
 simple:
@@ -186,8 +186,8 @@ simple:
 		;
 
 simple_list:
-		  simple
-		| simple ',' simple_list
+		  simple					{ $$ = new StmtList($1); }
+		| simple ',' simple_list	{ $3->append($1); $$ = $3; }
 		;
 
 call:
@@ -212,7 +212,8 @@ atom:
 		;
 
 expr:
-		  atom						{ $$ = $1; }
+		  atom						
+		  	{ $$ = $1; }
 		| T_constInt				{ $$ = new Const($1); }
 		| T_constChar				{ $$ = new Const($1); }
 		| '(' expr ')'				{ $$ = $2; }
