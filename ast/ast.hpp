@@ -418,7 +418,7 @@ private:
 
 
 
-class Formal
+class Formal : public AST
 {
 public:
 	Formal(std::string *t, VarList *v, bool isRef=false) : type(t) , var_list(v), isRef(isRef) {}
@@ -434,7 +434,7 @@ private:
 	bool isRef;
 };
 
-class FormalList
+class FormalList : public AST
 {
 public:
 	FormalList() {}
@@ -447,7 +447,7 @@ private:
 };
 
 
-class Function
+class Function : public AST
 {
 public:
 	Function(Var *v,FormalList *fl,std::string *t=NULL) : functionName(v), formal_list(fl) , type(t) {} 
@@ -463,7 +463,7 @@ private:
 	std::string *type;
 };
 
-class Definition
+class Definition : public AST
 {
 
 };
@@ -485,7 +485,7 @@ private:
 };
 
 
-class DefinitionList
+class DefinitionList : public AST
 {
 public:
 	DefinitionList() : definition_list() {}
@@ -497,7 +497,7 @@ private:
 	std::vector<Definition *> definition_list;
 };
 
-class Header
+class Header : public AST
 {
 public:
 	Header(Var *v,FormalList *fl,std::string *t=NULL) : functionName(v), formal_list(fl) , type(t) {} 
