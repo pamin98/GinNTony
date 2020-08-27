@@ -96,7 +96,7 @@
 %type	<header> 				header
 %type	<formal> 				formal
 %type	<formal_list> 			formal_list
-%type	<formal_list> 			formal_tail
+%type	<formal_list> 			formal_head
 %type	<var_list> 				var_list
 %type	<var_definition> 		var_def
 %type	<type> 					type
@@ -110,7 +110,7 @@
 %type	<expr> 					expr
 %type	<expr> 					atom
 %type	<expr_list> 			expr_list
-%type	<expr_list> 			expr_tail
+%type	<expr_list> 			expr_head
 
 %%
 
@@ -119,8 +119,7 @@ program:
 		;
 
 func_def:
-		"def" header ':' definition_list stmt_list "end"	{ $4-> reverse(); $5->reverse(); 
-															  $$ = new FunctionDefinition($2,$4,$5); }
+		"def" header ':' definition_list stmt_list "end"	{ $$ = new FunctionDefinition($2,$4,$5); }
 		;
 
 func_decl:
@@ -129,14 +128,14 @@ func_decl:
 
 definition_list:
 										{ $$ = new DefinitionList(); }
-		| func_def definition_list		{ $2->append($1); $$=$2; }
-		| func_decl definition_list		{ $2->append($1); $$=$2; }
-		| var_def definition_list		{ $2->append($1); $$=$2; }
+		| definition_list func_def 		{ $1->append($2); $$=$1; }
+		| definition_list func_decl 	{ $1->append($2); $$=$1; }
+		| definition_list var_def 		{ $1->append($2); $$=$1; }
 		;
 
 stmt_list:
 			stmt						{ $$ = new StmtList($1); }
-		|	stmt stmt_list				{ $2->append($1); $$=$2; }
+		|	stmt_list stmt				{ $1->append($2); $$=$1; }
 		;
 
 header:
@@ -146,22 +145,22 @@ header:
 
 formal_list:
 										{ $$ = new FormalList(); }
-		|	formal formal_tail			{ $2->append($1) ; $2->reverse(); $$ = $2; }
+		|	formal_head formal 			{ $1->append($2) ; $$ = $1; }
 		;
 
-formal_tail:
-										{ $$ = new FormalList(); }
-		| ';' formal formal_tail		{ $3->append($2); $$ = $3; }
+formal_head:
+		  								{ $$ = new FormalList(); }
+		| formal_head formal ';' 		{ $1->append($2); $$ = $1; }
 		;
 
 formal:
-		  type var_list					{ $2->reverse(); $$ = new Formal($1,$2); }
-		| "ref" type var_list 			{ $3->reverse(); $$ = new Formal($2,$3,true); }
+		  type var_list					{ $$ = new Formal($1,$2); }
+		| "ref" type var_list 			{ $$ = new Formal($2,$3,true); }
 		; 
 
 var_list:
 			T_var 						{ $$ = new VarList($1); }
-		|	T_var ',' var_list 			{ $3->append($1); $$ = $3; }
+		|	var_list ',' T_var			{ $1->append($3); $$ = $1; }
 	; 
 
 type:
@@ -174,7 +173,7 @@ type:
 
 
 var_def:
-		type var_list					{ $2->reverse(); $$ = new VarDefinition($1,$2); }
+		type var_list					{ $$ = new VarDefinition($1,$2); }
 		;
 
 
@@ -182,19 +181,18 @@ stmt:
 		  simple															{ $$ = $1; }
 		| "exit" 															{ $$ = new ExitStmt(); }
 		| "return" expr 													{ $$ = new ReturnStmt($2); }
-		| "if" expr ':' stmt_list elsif_list "end" 							{ $4-> reverse(); $$ = new If($2,$4,$5); }	
-		| "for" simple_list ';' expr ';' simple_list ':' stmt_list "end"	{ $2-> reverse(); $6->reverse(); $8-> reverse(); 
-																			  $$ = new For($2,$4,$6,$8); }
+		| "if" expr ':' stmt_list elsif_list "end" 							{ $$ = new If($2,$4,$5); }	
+		| "for" simple_list ';' expr ';' simple_list ':' stmt_list "end"	{ $$ = new For($2,$4,$6,$8); }
 		;
 
 elsif_list:
-			else	{ $$ = $1; }
-		|	"elsif" expr ':' stmt_list elsif_list	{ $4-> reverse(); $$ = new If($2,$4,$5); }
+			else									{ $$ = $1; }
+		|	"elsif" expr ':' stmt_list elsif_list	{ $$ = new If($2,$4,$5); }
 		;
 
 else:
 		/* nothing */					{ $$ = NULL; }
-		| "else" ':' stmt_list			{ $3-> reverse(); $$ = new If(NULL,$3,NULL); }
+		| "else" ':' stmt_list			{ $$ = new If(NULL,$3,NULL); }
 		;
 
 simple:
@@ -205,7 +203,7 @@ simple:
 
 simple_list:
 			simple						{ $$ = new StmtList($1); }
-		|	simple ',' simple_list		{ $3->append($1); $$ = $3; }
+		|	simple_list ',' simple		{ $1->append($3); $$ = $1; }
 	;
 
 call:
@@ -214,12 +212,12 @@ call:
 
 expr_list:
 		/* nothing */ 					{ $$ = new ExprList(); }
-		| expr expr_tail				{ $2->append($1); $2->reverse() ; $$ = $2; }
+		| expr_head expr				{ $1->append($2); $$ = $1; }
 		;
 
-expr_tail:
+expr_head:
 		 								{ $$ = new ExprList(); }
-		| ',' expr expr_tail			{ $3->append($2) ; $$ = $3; }
+		| expr_head expr ',' 			{ $1->append($2); $$ = $1; }
 		;
 
 atom:

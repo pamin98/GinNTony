@@ -117,7 +117,7 @@ public:
 	VarList(Var *v)	{ var_list.push_back(v); }
 	
 	void append(Var *v)	{ var_list.push_back(v); }
-	void reverse() { std::reverse(var_list.begin(), var_list.end()); } 
+
 	virtual void printOn(std::ostream &out) const override
 	{
 		//out << "Id(" << type << " " << var << ")";
@@ -247,7 +247,7 @@ public:
 			delete s;
 	}
 	void append(Stmt *s) { stmt_list.push_back(s); }
-	void reverse() { std::reverse(stmt_list.begin(), stmt_list.end()); }
+
 	virtual void printOn(std::ostream &out) const override
 	{
 		out << "StmtList(";
@@ -300,7 +300,7 @@ public:
 			delete e;
 	}
 	void append(Expr *e) { expr_list.push_back(e); }
-	void reverse() { std::reverse(expr_list.begin(), expr_list.end()); }
+
 	virtual void printOn(std::ostream &out) const override
 	{
 		out << "ExprList(";
@@ -441,7 +441,6 @@ public:
 	~FormalList() {}
 
 	void append(Formal *f){	formal_list.push_back(f); }
-	void reverse(){	std::reverse(formal_list.begin(), formal_list.end()); }
 
 private:
 	std::vector<Formal *> formal_list;
@@ -493,7 +492,7 @@ public:
 	~DefinitionList(){}
 
 	void append(Definition *d){	definition_list.push_back(d); }
-	void reverse() { std::reverse(definition_list.begin(), definition_list.end()); }
+
 private:
 	std::vector<Definition *> definition_list;
 };
