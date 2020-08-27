@@ -91,7 +91,7 @@ public:
 	~SkipStmt() {}
 	virtual void printOn(std::ostream &out) const override
 	{
-		out << "Shqip";
+		out << "Skip";
 	}
 };
 
@@ -114,14 +114,10 @@ private:
 class VarList : public Expr
 {
 public:
-	VarList(Var *v)
-	{
-		var_list.push_back(v);
-	}
-	void append(Var *v)
-	{
-		var_list.push_back(v);
-	}
+	VarList(Var *v)	{ var_list.push_back(v); }
+	
+	void append(Var *v)	{ var_list.push_back(v); }
+	void reverse() { std::reverse(var_list.begin(), var_list.end()); } 
 	virtual void printOn(std::ostream &out) const override
 	{
 		//out << "Id(" << type << " " << var << ")";
@@ -131,10 +127,10 @@ private:
 	std::vector<Var *> var_list; 
 };
 
-class Const : public Expr
+class ConstInt : public Expr
 {
 public:
-	Const(int n) : num(n) {}
+	ConstInt(int n) : num(n) {}
 	virtual void printOn(std::ostream &out) const override
 	{
 		out << "Const(" << num << ")";
@@ -251,6 +247,7 @@ public:
 			delete s;
 	}
 	void append(Stmt *s) { stmt_list.push_back(s); }
+	void reverse() { std::reverse(stmt_list.begin(), stmt_list.end()); }
 	virtual void printOn(std::ostream &out) const override
 	{
 		out << "StmtList(";
@@ -272,13 +269,14 @@ private:
 class For : public Stmt
 {
 public:
-	For( StmtList *s1 ,Expr *e, StmtList *s2 , StmtList *s3) : stmt_list1(s1) , expr(e) , stmt_list2(s2) , stmt_list3(s3) {}
+	For( StmtList *s1 ,Expr *e, StmtList *s2 , StmtList *s3) : 
+	initializers(s1) , threshold(e) , steps(s2) , loop_body(s3) {}
 	~For()
 	{
-		delete expr;
-		delete stmt_list1;
-		delete stmt_list2;
-		delete stmt_list3;
+		delete threshold;
+		delete initializers;
+		delete steps;
+		delete loop_body;
 	}
 	virtual void printOn(std::ostream &out) const override
 	{
@@ -286,10 +284,10 @@ public:
 	}
 
 private:
-	Expr *expr;
-	Stmt *stmt_list1;
-	Stmt *stmt_list2;
-	Stmt *stmt_list3;
+	Expr *threshold;
+	Stmt *initializers;
+	Stmt *steps;
+	Stmt *loop_body;
 };
 
 class ExprList : public Expr
@@ -335,10 +333,7 @@ public:
 	{
 		//out << "If(" << *cond << ", " << stmt_list->printOn(out) << ")";
 	}
-	void append(If *i)
-	{
-		nextIf = i;
-	}
+	void append(If *i){	nextIf = i;	}
 
 private:
 	Expr *cond;
@@ -403,18 +398,6 @@ private:
 	Expr *right;
 };
 
-class Type : public std::string
-{
-public:
-	Type(const char *c): std::string(c) {}
-// public:
-// 	Type(std::string t) : type(t) {};
-// 	~Type();
-	
-// private:
-// 	std::string type;
-};
-
 class ArrayInit : public Expr
 {
 public:
@@ -454,18 +437,11 @@ private:
 class FormalList
 {
 public:
-	FormalList()
-	{
+	FormalList() {}
+	~FormalList() {}
 
-	}
-	~FormalList()
-	{
-
-	}
-	void append(Formal *f)
-	{
-		formal_list.push_back(f);
-	}
+	void append(Formal *f){	formal_list.push_back(f); }
+	void reverse(){	std::reverse(formal_list.begin(), formal_list.end()); }
 
 private:
 	std::vector<Formal *> formal_list;
@@ -514,14 +490,10 @@ class DefinitionList
 {
 public:
 	DefinitionList() : definition_list() {}
-	~DefinitionList()
-	{
+	~DefinitionList(){}
 
-	}
-	void append(Definition *d)
-	{
-		definition_list.push_back(d);
-	}
+	void append(Definition *d){	definition_list.push_back(d); }
+	void reverse() { std::reverse(definition_list.begin(), definition_list.end()); }
 private:
 	std::vector<Definition *> definition_list;
 };

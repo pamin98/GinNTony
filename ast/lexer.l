@@ -13,13 +13,11 @@
 int lineno = 1;
 int commentLevel = 0;
 
-int getChar( char *stringgaki)
-{
-	if(stringgaki[0]!='\\')
-		return stringgaki[0];
+int getChar( char *chr){
+	if(chr[0]!='\\')
+		return chr[0];
 	else
-		switch(stringgaki[1])
-		{
+		switch(chr[1]){
 			case 'n': return '\n';
 			case 't': return '\t';
 			case 'r': return '\r';
@@ -27,9 +25,9 @@ int getChar( char *stringgaki)
 			case '\\': return '\\';
 			case '\'': return '\'';
 			case '\"': return '\'';
-			case 'x': { return (int)strtol(stringgaki+2, NULL, 16); }
+			case 'x': { return (int)strtol(chr+2, NULL, 16); }
 			default:
-				printf("%c",stringgaki[1]);
+				printf("This will never happen!\n");
 				exit(1);
 		}
 }
@@ -44,6 +42,7 @@ HD      [0-9a-fA-F]
 H 		\\x{HD}{HD}
 
 %x COMMENT 
+
 %%
 
 "and"						{ return T_and; }
@@ -101,16 +100,10 @@ H 		\\x{HD}{HD}
 <<EOF>>						{ return T_eof; }
 .							{ fprintf(stderr, "Error: Found character %c with code %d in line %d.\n", yytext[0]>=32 ? yytext[0]:'?', yytext[0], lineno); exit(1); }
 
-
-
 %%
 
-
-
-
-void yyerror (const char * msg)
-{
-	fprintf(stderr,"error :  %s\n",msg);
+void yyerror (const char * msg){
+	fprintf(stderr,"Error found in line %d: %s\n", lineno, msg);
 	exit(1);
 }
 
