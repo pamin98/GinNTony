@@ -6,33 +6,11 @@
 #include <string>
 #include <algorithm>
 
-enum relOp
-{
-	eq,
-	lt,
-	gt,
-	le,
-	ge,
-	neq
-};
+enum relOp { eq, lt, gt, le, ge, neq };
 
-enum logOp
-{
-	AND,
-	OR,
-	NOT,
-	TRUE,
-	FALSE
-};
+enum logOp { AND, OR, NOT, TRUE, FALSE };
 
-enum listOp
-{
-	nil,
-	nilq,
-	head,
-	tail,
-	append
-};
+enum listOp { nil, nilq, head, tail, append };
 
 class AST
 {
@@ -280,7 +258,7 @@ public:
 	}
 	virtual void printOn(std::ostream &out) const override
 	{
-		//out << "For(" << *expr << ", " << *stmt_list << ")";
+		//out << "For(" << *initializers << ", " << *threshold << ", " *steps << ": " << *loop_body << ")";
 	}
 
 private:
@@ -428,6 +406,11 @@ public:
 		delete type;
 	}
 
+	virtual void printOn(std::ostream &out) const override
+	{
+		
+	}
+
 private:
 	std::string *type;
 	VarList *var_list;
@@ -441,6 +424,11 @@ public:
 	~FormalList() {}
 
 	void append(Formal *f){	formal_list.push_back(f); }
+
+	virtual void printOn(std::ostream &out) const override
+	{
+		
+	}
 
 private:
 	std::vector<Formal *> formal_list;
@@ -456,6 +444,11 @@ public:
 		delete functionName;
 		delete formal_list;
 		delete type;
+	}
+
+	virtual void printOn(std::ostream &out) const override
+	{
+		
 	}
 private:
 	Var *functionName;
@@ -479,6 +472,11 @@ public:
 		delete type;
 	}
 
+	virtual void printOn(std::ostream &out) const override
+	{
+		
+	}
+
 private:
 	std::string *type;
 	VarList *var_list;
@@ -493,6 +491,11 @@ public:
 
 	void append(Definition *d){	definition_list.push_back(d); }
 
+
+	virtual void printOn(std::ostream &out) const override
+	{
+		
+	}
 private:
 	std::vector<Definition *> definition_list;
 };
@@ -506,6 +509,11 @@ public:
 		delete functionName;
 		delete formal_list;
 		delete type;
+	}
+
+	virtual void printOn(std::ostream &out) const override
+	{
+		
 	}
 private:
 	Var *functionName;
@@ -534,6 +542,10 @@ public:
 		stmt_list = sl;
 	}
 
+	virtual void printOn(std::ostream &out) const override
+	{
+		
+	}
 private:
 	Header *header;
 	DefinitionList *def_list;
@@ -547,6 +559,11 @@ public:
 	~FunctionDeclaration()
 	{
 		delete header;
+	}
+
+	virtual void printOn(std::ostream &out) const override
+	{
+		
 	}
 private:
 	Header *header;
