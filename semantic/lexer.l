@@ -6,11 +6,33 @@
 #include <stdio.h>
 #include "lexer.hpp"
 #include "parser.hpp"
+#include "general.hpp"
+#include "error.hpp"
+
 
 #define		T_eof			0
 
-int lineno = 1;
 int commentLevel = 0;
+
+int getChar( char *chr){
+	if(chr[0]!='\\')
+		return chr[0];
+	else
+		switch(chr[1]){
+			case 'n': return '\n';
+			case 't': return '\t';
+			case 'r': return '\r';
+			case '0': return '\0';
+			case '\\': return '\\';
+			case '\'': return '\'';
+			case '\"': return '\'';
+			case 'x': { return (int)strtol(chr+2, NULL, 16); }
+			default:
+				internal("Unable to get char.Aborting...");
+				exit(1);
+		}
+}
+
 %}
 
 D 		[0-9]
@@ -21,6 +43,7 @@ HD      [0-9a-fA-F]
 H 		\\x{HD}{HD}
 
 %x COMMENT 
+
 %%
 
 "and"						{ return T_and; }
@@ -76,35 +99,11 @@ H 		\\x{HD}{HD}
 {W}							{ }
 \n 							{ lineno = lineno + 1; }
 <<EOF>>						{ return T_eof; }
-.							{ fprintf(stderr, "Error: Found character %c with code %d in line %d.\n", yytext[0]>=32 ? yytext[0]:'?', yytext[0], lineno); exit(1); }
+.							{ fatal("found character %c with code %d.", yytext[0]>=32 ? yytext[0]:'?', yytext[0]); }
+
 %%
 
-
-int getChar( char *str)
-{
-	if(str[0]!='\\')
-		return str[0];
-	else
-		switch(str[1])
-		{
-			case 'n': return '\n';
-			case 't': return '\t';
-			case 'r': return '\r';
-			case '0': return '\0';
-			case '\\': return '\\';
-			case '\'': return '\'';
-			case '\"': return '\'';
-			case 'x': { return (int)strtol(str+2, NULL, 16); }
-			default:
-				printf("%c",str[1]);
-				exit(1);
-		}
-}
-
-
-void yyerror (const char * msg)
-{
-	fprintf(stderr,"error :  %s\n",msg);
+void yyerror (const char * msg){
+	error(msg);
 	exit(1);
 }
-
