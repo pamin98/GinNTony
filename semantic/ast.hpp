@@ -88,25 +88,6 @@ public:
 
 extern std::map<std::string, int> globals;
 
-class Var : public Expr
-{
-public:
-	Var(std::string v, std::string t) : var(v), type(t) {}
-	virtual void printOn(std::ostream &out) const override
-	{
-		out << "Id(" << type << " " << var << ")";
-	}
-
-	virtual void sem() override {
-
-	}
-
-private:
-	std::string var;
-	std::string type;
-};
-
-
 class ConstInt : public Expr
 {
 public:
@@ -397,46 +378,6 @@ private:
 };
 
 
-
-class Formal : public AST
-{
-public:
-	Formal(std::string *t, VarList *v, bool isRef=false) : type(t) , var_list(v), isRef(isRef) {}
-	~Formal() 
-	{
-		delete var_list; 
-		delete type;
-	}
-
-	virtual void printOn(std::ostream &out) const override
-	{
-		
-	}
-
-private:
-	std::string *type;
-	VarList *var_list;
-	bool isRef;
-};
-
-class FormalList : public AST
-{
-public:
-	FormalList() {}
-	~FormalList() {}
-
-	void append(Formal *f){	formal_list.push_back(f); }
-
-	virtual void printOn(std::ostream &out) const override
-	{
-		
-	}
-
-private:
-	std::vector<Formal *> formal_list;
-};
-
-
 /****************************************************************************************************************
  ************************************************ SEM COMPLETED *************************************************
  ***************************************************************************************************************/
@@ -464,7 +405,7 @@ public:
 		if(!T)		/* Declarations should be forwarded */
 			forwardFunction(f);
 		openScope()
-		formal_list->sem();
+		formal_list->passParameters(f);
 		endFunctionHeader(f, type);
 		closeScope();
 	}
@@ -601,4 +542,54 @@ public:
 private:
 	Type type;
 	VarList *var_l;
+};
+
+class Formal : public AST
+{
+public:
+	Formal(Type t, VarList *v, bool isRef=false) : type(t) , var_l(v) {
+		if(isRef)
+			mode = PASS_BY_REFERENCE;
+		else
+			mode = PASS_BY_VALUE;
+	}
+	~Formal() {
+		delete var_list; 
+	}
+
+	virtual void printOn(std::ostream &out) const override
+	{
+		
+	}
+
+	virtual void passParameters (SymbolEntry *f) {
+		for (const char *v : var_l->var_list)
+			SymbolEntry *e = newParameter(v, type, mode, f);
+	}
+
+private:
+	Type type;
+	VarList *var_l;
+	PassMode mode;
+};
+
+class FormalList : public AST
+{
+public:
+	FormalList() {}
+	~FormalList() {}
+
+	void append(Formal *f){	formal_list.push_back(f); }
+
+	virtual void printOn(std::ostream &out) const override
+	{
+		
+	}
+
+	virtual void passParameters (SymbolEntry *f) {
+		for(Formal *f : formal_list) f->passParameters(f);
+	}
+
+private:
+	std::vector<Formal *> formal_list;
 };

@@ -31,7 +31,6 @@
 	FormalList 					*formal_list;
 	Expr 						*expr;
 	ExprList 					*expr_list;
-	Var 						*var;
 	VarList 					*var_list;
 	VarDefinition 				*var_definition;
 	If 							*ifClass;
