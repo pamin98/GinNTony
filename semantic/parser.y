@@ -31,6 +31,7 @@
 	FormalList 					*formal_list;
 	Expr 						*expr;
 	ExprList 					*expr_list;
+	Var 						*var;
 	VarList 					*var_list;
 	VarDefinition 				*var_definition;
 	If 							*ifClass;
@@ -228,7 +229,7 @@ expr_head:
 		;
 
 atom:
-		  T_var							{ $$ = $1; }
+		  T_var							{ $$ = new Var($1); }
 		| T_constString					{ $$ = new ConstString($1); }
 		| atom '[' expr ']'				{ $$ = new ArrayIndexing($1,$3); }		
 		| call							{ $$ = $1; }

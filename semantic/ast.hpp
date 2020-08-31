@@ -251,34 +251,7 @@ private:
 	Stmt *loop_body;
 };
 
-class ExprList : public Expr
-{
-public:
-	ExprList() : expr_list() {}
-	~ExprList()
-	{
-		for (Expr *e : expr_list)
-			delete e;
-	}
-	void append(Expr *e) { expr_list.push_back(e); }
 
-	virtual void printOn(std::ostream &out) const override
-	{
-		out << "ExprList(";
-		bool first = true;
-		for (Expr *e : expr_list)
-		{
-			if (!first)
-				out << ", ";
-			first = false;
-			out << *e;
-		}
-		out << ")";
-	}
-
-private:
-	std::vector<Expr *> expr_list;
-};
 
 class If : public Stmt
 {
@@ -321,10 +294,29 @@ private:
 	Expr *index;
 };
 
+class ExprList : public Expr
+{
+public:
+	std::vector<Expr *> expr_list;
+
+	ExprList() : expr_list() {}
+	~ExprList()
+	{
+		for (Expr *e : expr_list)
+			delete e;
+	}
+	void append(Expr *e) { expr_list.push_back(e); }
+
+	virtual void printOn(std::ostream &out) const override
+	{
+		
+	}
+};
+
 class CallObject : public Expr, public Stmt
 {
 public:
-	CallObject(Var *n, ExprList *e) : functionName(n), expr_list(e) {}
+	CallObject(const char *n, ExprList *e) : functionName(n), expr_list(e) {}
 	~CallObject()
 	{
 		delete functionName;
@@ -335,9 +327,42 @@ public:
 		out << "(" << *functionName << ", " << *expr_list << ")";
 	}
 
+	virtual void sem () override {
+		int functionArguments = 0;
+		bool argMismatch = false;
+		SymbolEntry *f = lookupEntry(functionName);
+		type = f->u.eFunction.resultType;
+		SymbolEntry * args;
+		args = f->u.eFunction.firstArgument;
+		for(Expr *e : expr_l->expr_list){
+			Type paramType; 
+			if(args){
+				++functionArguments;
+				paramType = args->u.eParameter.type;
+			}
+			else{
+				argMismatch = true;
+				break;
+			}
+			e->type_check(paramType);
+			args = args->u.eParameter.next; 
+		}
+		if (argMismatch)
+			error("Expected %d arguments for function %s, but %lu were given.", 
+				   functionArguments, functionName, expr_l->expr_list.size());
+		else if (args){
+			while (args){
+				++functionArguments;
+				args = args->u.eParameter.next;
+			}
+			error("Expected %d arguments for function %s, but %lu were given.", 
+				   functionArguments, functionName, expr_l->expr_list.size());
+		}
+	}
+
 private:
-	Var *functionName;
-	ExprList *expr_list;
+	const char *functionName;
+	ExprList *expr_l;
 };
 
 class AssignStmt : public Stmt
@@ -503,6 +528,23 @@ private:
 	Header *header;
 };
 
+class Var : public Expr
+{
+public:
+	Var(const char * v) : var(v){}
+	virtual void printOn(std::ostream &out) const override
+	{
+		out << "Id(" << type << " " << var << ")";
+	}
+
+	virtual void sem () override {
+		SymbolEntry * e = lookupEntry(var, LOOKUP_ALL_SCOPES, true);
+		type = e->u.eVariable.type;
+	}
+private:
+	const char *var;
+};
+
 class VarList : public Expr
 {
 public:
@@ -516,7 +558,6 @@ public:
 	{
 		//out << "Id(" << type << " " << var << ")";
 	}
- 
 };
 
 class VarDefinition : public Definition
