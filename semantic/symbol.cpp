@@ -683,3 +683,32 @@ void printMode (PassMode mode)
     if (mode == PASS_BY_REFERENCE)
         printf("var ");
 }
+
+const char * TypeToStr (Type type) {
+    if (type == NULL) {
+        return "<undefined>";
+    }
+    char buffer[1024];
+    switch (type->kind) {
+        case TYPE_VOID:
+            return "void";
+        case TYPE_INTEGER:
+            return "integer";
+        case TYPE_BOOLEAN:
+            return "boolean";
+        case TYPE_CHAR:
+            return "char";
+        case TYPE_IARRAY:
+            sprintf(buffer, "array of %s", TypeToStr(type->refType));
+            return strdup(buffer);
+        case TYPE_ARRAY:
+            sprintf(buffer, "array [%d] of %s", type->size, TypeToStr(type->refType));
+            return strdup(buffer);
+        case TYPE_POINTER:
+            sprintf(buffer, "list of %s", TypeToStr(type->refType));
+            return strdup(buffer);
+        case TYPE_NIL:
+            return "nil";
+    return "undefined";
+    }
+}

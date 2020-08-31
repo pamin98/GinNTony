@@ -18,31 +18,13 @@ enum listOp { nil, nilq, head, tail, append };
 
 typedef enum HeaderType { Func_Decl, Func_Def } HeaderType;
 
-class AST
-{
-public:
-	virtual ~AST() {}
-	virtual void printOn(std::ostream &out) const = 0;
-	virtual void sem () {}
-};
-
 inline std::ostream &operator<<(std::ostream &out, const AST &t)
 {
 	t.printOn(out);
 	return out;
 }
 
-class Expr : public AST
-{
-public:
-	//virtual int eval() const = 0;
-	void type_check(Type t) {
-		sem();
-		if (type != t) error("Type mismatch.");
-	}
-protected:
-	Type type;
-};
+
 
 class Stmt : public AST
 {
@@ -86,93 +68,7 @@ public:
 	}
 };
 
-extern std::map<std::string, int> globals;
 
-class ConstInt : public Expr
-{
-public:
-	ConstInt(int n) : num(n) {}
-	virtual void printOn(std::ostream &out) const override
-	{
-		out << "Const(" << num << ")";
-	}
-
-private:
-	int num;
-};
-
-class ConstString : public Expr
-{
-public:
-	ConstString(std::string str) : str(str) {}
-	virtual void printOn(std::ostream &out) const override
-	{
-		out << "Const(" << str << ")";
-	}
-
-private:
-	std::string str;
-};
-
-class BinOp : public Expr
-{
-public:
-	BinOp(Expr *l, char o, Expr *r) : left(l), op(o), right(r) {}
-	~BinOp()
-	{
-		delete left;
-		delete right;
-	}
-	virtual void printOn(std::ostream &out) const override
-	{
-		out << op << "(" << *left << ", " << *right << ")";
-	}
-
-private:
-	Expr *left;
-	char op;
-	Expr *right;
-};
-
-class RelOp : public Expr
-{
-public:
-	RelOp(Expr *l, relOp o, Expr *r) : left(l), op(o), right(r) {}
-	~RelOp()
-	{
-		delete left;
-		delete right;
-	}
-	virtual void printOn(std::ostream &out) const override
-	{
-		out << op << "(" << *left << ", " << *right << ")";
-	}
-
-private:
-	Expr *left;
-	relOp op;
-	Expr *right;
-};
-
-class LogOp : public Expr
-{
-public:
-	LogOp(logOp o, Expr *l = NULL, Expr *r = NULL) : left(l), op(o), right(r) {}
-	~LogOp()
-	{
-		delete left;
-		delete right;
-	}
-	virtual void printOn(std::ostream &out) const override
-	{
-		out << op << "(" << *left << ", " << *right << ")";
-	}
-
-private:
-	Expr *left;
-	logOp op;
-	Expr *right;
-};
 
 class ListOp : public Expr
 {
@@ -294,96 +190,6 @@ private:
 	Expr *index;
 };
 
-class ExprList : public Expr
-{
-public:
-	std::vector<Expr *> expr_list;
-
-	ExprList() : expr_list() {}
-	~ExprList()
-	{
-		for (Expr *e : expr_list)
-			delete e;
-	}
-	void append(Expr *e) { expr_list.push_back(e); }
-
-	virtual void printOn(std::ostream &out) const override
-	{
-		
-	}
-};
-
-class CallObject : public Expr, public Stmt
-{
-public:
-	CallObject(const char *n, ExprList *e) : functionName(n), expr_list(e) {}
-	~CallObject()
-	{
-		delete functionName;
-		delete expr_list;
-	}
-	virtual void printOn(std::ostream &out) const override
-	{
-		out << "(" << *functionName << ", " << *expr_list << ")";
-	}
-
-	virtual void sem () override {
-		int functionArguments = 0;
-		bool argMismatch = false;
-		SymbolEntry *f = lookupEntry(functionName);
-		type = f->u.eFunction.resultType;
-		SymbolEntry * args;
-		args = f->u.eFunction.firstArgument;
-		for(Expr *e : expr_l->expr_list){
-			Type paramType; 
-			if(args){
-				++functionArguments;
-				paramType = args->u.eParameter.type;
-			}
-			else{
-				argMismatch = true;
-				break;
-			}
-			e->type_check(paramType);
-			args = args->u.eParameter.next; 
-		}
-		if (argMismatch)
-			error("Expected %d arguments for function %s, but %lu were given.", 
-				   functionArguments, functionName, expr_l->expr_list.size());
-		else if (args){
-			while (args){
-				++functionArguments;
-				args = args->u.eParameter.next;
-			}
-			error("Expected %d arguments for function %s, but %lu were given.", 
-				   functionArguments, functionName, expr_l->expr_list.size());
-		}
-	}
-
-private:
-	const char *functionName;
-	ExprList *expr_l;
-};
-
-class AssignStmt : public Stmt
-{
-public:
-	AssignStmt(Expr *l, Expr *r) : left(l), right(r) {}
-	~AssignStmt()
-	{
-		delete left;
-		delete right;
-	}
-	virtual void printOn(std::ostream &out) const override
-	{
-		//out << "If(" << *cond << ", " << stmt_list->printOn(out) << ")";
-	}
-
-private:
-	Expr *left;
-	Expr *right;
-};
-
 class ArrayInit : public Expr
 {
 public:
@@ -406,6 +212,31 @@ private:
 /****************************************************************************************************************
  ************************************************ SEM COMPLETED *************************************************
  ***************************************************************************************************************/
+class AST
+{
+public:
+	virtual ~AST() {}
+	virtual void printOn(std::ostream &out) const = 0;
+	virtual void sem () {}
+};
+
+class Expr : public AST
+{
+public:
+	//virtual int eval() const = 0;
+	void type_check(Type t) {
+		sem();
+		if (!equalType(t, type)) 
+			error("Invalid type of operand. Expected %s, got %s.", TypeToStr(t), TypeToStr(type));
+	}
+
+	Type get_type () {
+		sem();
+		return type;
+	}
+protected:
+	Type type;
+};
 
 class Header : public AST
 {
@@ -564,8 +395,7 @@ class VarDefinition : public Definition
 {
 public:
 	VarDefinition(Type t, VarList *v) : type(t), var_list(v) {}
-	~VarDefinition() 
-	{
+	~VarDefinition() {
 		delete var_list; 
 		delete type;
 	}
@@ -633,4 +463,226 @@ public:
 
 private:
 	std::vector<Formal *> formal_list;
+};
+
+class ExprList : public Expr
+{
+public:
+	std::vector<Expr *> expr_list;
+
+	ExprList() : expr_list() {}
+	~ExprList()	{
+		for (Expr *e : expr_list)
+			delete e;
+	}
+	void append(Expr *e) { expr_list.push_back(e); }
+
+	virtual void printOn(std::ostream &out) const override
+	{
+		
+	}
+};
+
+class CallObject : public Expr, public Stmt
+{
+public:
+	CallObject(const char *n, ExprList *e) : functionName(n), expr_list(e) {}
+	~CallObject()
+	{
+		delete functionName;
+		delete expr_list;
+	}
+	virtual void printOn(std::ostream &out) const override
+	{
+		out << "(" << *functionName << ", " << *expr_list << ")";
+	}
+
+	virtual void sem () override {
+		int functionArguments = 0;
+		bool argMismatch = false;
+		SymbolEntry *f = lookupEntry(functionName);
+		type = f->u.eFunction.resultType;
+		SymbolEntry * args;
+		args = f->u.eFunction.firstArgument;
+		for(Expr *e : expr_l->expr_list){
+			Type paramType; 
+			if(args){
+				++functionArguments;
+				paramType = args->u.eParameter.type;
+			}
+			else{
+				argMismatch = true;
+				break;
+			}
+			e->type_check(paramType);
+			args = args->u.eParameter.next; 
+		}
+		if (argMismatch)
+			error("Expected %d arguments for function %s, but %lu were given.", 
+				   functionArguments, functionName, expr_l->expr_list.size());
+		else if (args){
+			while (args){
+				++functionArguments;
+				args = args->u.eParameter.next;
+			}
+			error("Expected %d arguments for function %s, but %lu were given.", 
+				   functionArguments, functionName, expr_l->expr_list.size());
+		}
+	}
+
+private:
+	const char *functionName;
+	ExprList *expr_l;
+};
+
+class ConstString : public Expr {
+public:
+	ConstString(const char * str) : str(str) {}
+	virtual void printOn(std::ostream &out) const override
+	{
+		out << "Const(" << str << ")";
+	}
+
+	virtual void sem () override {
+		type = typeIArray(typeChar);
+	}
+
+private:
+	const char * str;
+};
+
+class ConstInt : public Expr {
+public:
+	ConstInt(int n) : num(n) {}
+	
+	virtual void printOn(std::ostream &out) const override
+	{
+		out << "Const(" << num << ")";
+	}
+
+	virtual void sem () override {
+		type = typeInteger;
+	}
+
+private:
+	int num;
+};
+
+class AssignStmt : public Stmt {
+public:
+	AssignStmt(Expr *l, Expr *r) : left(l), right(r) {}
+	~AssignStmt()
+	{
+		delete left;
+		delete right;
+	}
+	virtual void printOn(std::ostream &out) const override
+	{
+		//out << "If(" << *cond << ", " << stmt_list->printOn(out) << ")";
+	}
+
+	virtual void sem () override {
+		Type ltype = left->get_type();
+		right->type_check(ltype);
+	}
+
+private:
+	Expr *left;
+	Expr *right;
+};
+
+class BinOp : public Expr
+{
+public:
+	BinOp(Expr *l, char o, Expr *r) : left(l), op(o), right(r) {}
+	~BinOp()
+	{
+		delete left;
+		delete right;
+	}
+	virtual void printOn(std::ostream &out) const override
+	{
+		out << op << "(" << *left << ", " << *right << ")";
+	}
+
+	virtual void sem () override {
+		right->type_check(typeInteger);
+		if(left)
+			left->type_check(typeInteger);
+		type = typeInteger;
+	}
+
+private:
+	Expr *left;
+	char op;
+	Expr *right;
+};
+
+class RelOp : public Expr
+{
+public:
+	RelOp(Expr *l, relOp o, Expr *r) : left(l), op(o), right(r) {}
+	~RelOp()
+	{
+		delete left;
+		delete right;
+	}
+	virtual void printOn(std::ostream &out) const override
+	{
+		out << op << "(" << *left << ", " << *right << ")";
+	}
+
+	virtual void sem () override {
+		Type leftType = left->get_type();
+		Type rightType = right->get_type();
+		if(!equalType(leftType, rightType))
+			error("Operands of comparison have different types: %s and %s.", 
+				   TypeToStr(leftType). TypeToStr(rightType));
+		if(leftType->kind == TYPE_INTEGER 
+		   or leftType->kind == TYPE_BOOLEAN
+		   or leftType->kind == TYPE_CHAR)
+			type = typeBoolean;
+			return;
+		else
+			error("Comparisons supported only for integers, booleans and characters.");
+	}
+
+private:
+	Expr *left;
+	relOp op;
+	Expr *right;
+};
+
+class LogOp : public Expr
+{
+public:
+	LogOp(logOp o, Expr *l = NULL, Expr *r = NULL) : left(l), op(o), right(r) {}
+	~LogOp()
+	{
+		delete left;
+		delete right;
+	}
+	virtual void printOn(std::ostream &out) const override
+	{
+		out << op << "(" << *left << ", " << *right << ")";
+	}
+
+	virtual void sem () override {
+		switch(op) {
+			case TRUE: case FALSE:
+				break;
+			case NOT:
+				right->type_check(typeBoolean);
+				break;
+			case AND: case OR:
+				right->type_check(typeBoolean);
+				left->type_check(typeBoolean);
+		}
+		type = typeBoolean;
+	}
+
+private:
+	Expr *left;
+	logOp op;
+	Expr *right;
 };
