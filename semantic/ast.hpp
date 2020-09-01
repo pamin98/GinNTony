@@ -234,8 +234,92 @@ public:
 		sem();
 		return type;
 	}
+
+	virtual void lvalue_error () {}
 protected:
 	Type type;
+};
+
+class Var : public Expr
+{
+public:
+	Var(const char * v) : var(v){}
+	virtual void printOn(std::ostream &out) const override
+	{
+		out << "Id(" << type << " " << var << ")";
+	}
+
+	virtual void sem () override {
+		SymbolEntry * e = lookupEntry(var, LOOKUP_ALL_SCOPES, true);
+		type = e->u.eVariable.type;
+	}
+private:
+	const char *var;
+};
+
+class VarList : public Expr
+{
+public:
+	std::vector<const char *> var_list;
+	
+	VarList(const char *v)	{ var_list.push_back(v); }
+	
+	void append(const char *v)	{ var_list.push_back(v); }
+
+	virtual void printOn(std::ostream &out) const override
+	{
+		//out << "Id(" << type << " " << var << ")";
+	}
+};
+
+class Formal : public AST
+{
+public:
+	Formal(Type t, VarList *v, bool isRef=false) : type(t) , var_l(v) {
+		if(isRef)
+			mode = PASS_BY_REFERENCE;
+		else
+			mode = PASS_BY_VALUE;
+	}
+	~Formal() {
+		delete var_list; 
+	}
+
+	virtual void printOn(std::ostream &out) const override
+	{
+		
+	}
+
+	virtual void passParameters (SymbolEntry *f) {
+		for (const char *v : var_l->var_list)
+			SymbolEntry *e = newParameter(v, type, mode, f);
+	}
+
+private:
+	Type type;
+	VarList *var_l;
+	PassMode mode;
+};
+
+class FormalList : public AST
+{
+public:
+	FormalList() {}
+	~FormalList() {}
+
+	void append(Formal *f){	formal_list.push_back(f); }
+
+	virtual void printOn(std::ostream &out) const override
+	{
+		
+	}
+
+	virtual void passParameters (SymbolEntry *f) {
+		for(Formal *f : formal_list) f->passParameters(f);
+	}
+
+private:
+	std::vector<Formal *> formal_list;
 };
 
 class Header : public AST
@@ -260,10 +344,10 @@ public:
 		SymbolEntry * f = newFunction(functionName);
 		if(!T)		/* Declarations should be forwarded */
 			forwardFunction(f);
-		openScope()
+		openScope();
 		formal_list->passParameters(f);
 		endFunctionHeader(f, type);
-		closeScope();
+		closeScope();                           /* check scopes here !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! */
 	}
 
 private:
@@ -359,38 +443,6 @@ private:
 	Header *header;
 };
 
-class Var : public Expr
-{
-public:
-	Var(const char * v) : var(v){}
-	virtual void printOn(std::ostream &out) const override
-	{
-		out << "Id(" << type << " " << var << ")";
-	}
-
-	virtual void sem () override {
-		SymbolEntry * e = lookupEntry(var, LOOKUP_ALL_SCOPES, true);
-		type = e->u.eVariable.type;
-	}
-private:
-	const char *var;
-};
-
-class VarList : public Expr
-{
-public:
-	std::vector<const char *> var_list;
-	
-	VarList(const char *v)	{ var_list.push_back(v); }
-	
-	void append(const char *v)	{ var_list.push_back(v); }
-
-	virtual void printOn(std::ostream &out) const override
-	{
-		//out << "Id(" << type << " " << var << ")";
-	}
-};
-
 class VarDefinition : public Definition
 {
 public:
@@ -413,56 +465,6 @@ public:
 private:
 	Type type;
 	VarList *var_l;
-};
-
-class Formal : public AST
-{
-public:
-	Formal(Type t, VarList *v, bool isRef=false) : type(t) , var_l(v) {
-		if(isRef)
-			mode = PASS_BY_REFERENCE;
-		else
-			mode = PASS_BY_VALUE;
-	}
-	~Formal() {
-		delete var_list; 
-	}
-
-	virtual void printOn(std::ostream &out) const override
-	{
-		
-	}
-
-	virtual void passParameters (SymbolEntry *f) {
-		for (const char *v : var_l->var_list)
-			SymbolEntry *e = newParameter(v, type, mode, f);
-	}
-
-private:
-	Type type;
-	VarList *var_l;
-	PassMode mode;
-};
-
-class FormalList : public AST
-{
-public:
-	FormalList() {}
-	~FormalList() {}
-
-	void append(Formal *f){	formal_list.push_back(f); }
-
-	virtual void printOn(std::ostream &out) const override
-	{
-		
-	}
-
-	virtual void passParameters (SymbolEntry *f) {
-		for(Formal *f : formal_list) f->passParameters(f);
-	}
-
-private:
-	std::vector<Formal *> formal_list;
 };
 
 class ExprList : public Expr
@@ -501,6 +503,8 @@ public:
 		int functionArguments = 0;
 		bool argMismatch = false;
 		SymbolEntry *f = lookupEntry(functionName);
+		if(f->u.eFunction.isForward)
+			error("Function %s declared but not defined.", functionName);
 		type = f->u.eFunction.resultType;
 		SymbolEntry * args;
 		args = f->u.eFunction.firstArgument;
@@ -530,6 +534,10 @@ public:
 		}
 	}
 
+	virtual void lvalue_error () override {
+		error("Lvalue cannot be a function call.");
+	}
+
 private:
 	const char *functionName;
 	ExprList *expr_l;
@@ -545,6 +553,10 @@ public:
 
 	virtual void sem () override {
 		type = typeIArray(typeChar);
+	}
+
+	virtual void lvalue_error () override {
+		error("Lvalue cannot be a string literal.");
 	}
 
 private:
@@ -582,6 +594,7 @@ public:
 	}
 
 	virtual void sem () override {
+		left->lvalue_error();
 		Type ltype = left->get_type();
 		right->type_check(ltype);
 	}

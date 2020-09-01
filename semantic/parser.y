@@ -122,7 +122,7 @@ program:
 		;
 
 func_def:
-		"def" header_def ':' definition_list stmt_list "end"	{ $$ = new FunctionDefinition($2,$4,$5, Func_Def); }
+		"def" header_def ':' definition_list stmt_list "end"	{ $$ = new FunctionDefinition($2,$4,$5); }
 		;
 
 func_decl:

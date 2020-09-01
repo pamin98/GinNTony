@@ -48,7 +48,6 @@ static struct Type_tag typeConst [] = {
     { TYPE_INTEGER, NULL, 0, 0 },
     { TYPE_BOOLEAN, NULL, 0, 0 },
     { TYPE_CHAR,    NULL, 0, 0 },
-    { TYPE_REAL,    NULL, 0, 0 }
 };
 
 const Type typeVoid    = &(typeConst[0]);
