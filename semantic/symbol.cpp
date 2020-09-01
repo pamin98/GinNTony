@@ -1,28 +1,3 @@
-/******************************************************************************
- *  CVS version:
- *     $Id: symbol.c,v 1.3 2004/05/05 22:00:08 nickie Exp $
- ******************************************************************************
- *
- *  C code file : symbol.c
- *  Project     : PCL Compiler
- *  Version     : 1.0 alpha
- *  Written by  : Nikolaos S. Papaspyrou (nickie@softlab.ntua.gr)
- *  Date        : May 14, 2003
- *  Description : Generic symbol table in C
- *
- *  Comments: (in Greek iso-8859-7)
- *  ---------
- *  Εθνικό Μετσόβιο Πολυτεχνείο.
- *  Σχολή Ηλεκτρολόγων Μηχανικών και Μηχανικών Υπολογιστών.
- *  Τομέας Τεχνολογίας Πληροφορικής και Υπολογιστών.
- *  Εργαστήριο Τεχνολογίας Λογισμικού
- */
-
-
-/* ---------------------------------------------------------------------
-   ---------------------------- Header files ---------------------------
-   --------------------------------------------------------------------- */
-
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
@@ -32,16 +7,14 @@
 #include "symbol.hpp"
 
 
-/* ---------------------------------------------------------------------
-   ------------- Καθολικές μεταβλητές του πίνακα συμβόλων --------------
-   --------------------------------------------------------------------- */
 
-Scope        * currentScope;           /* Τρέχουσα εμβέλεια              */
-unsigned int   quadNext;               /* Αριθμός επόμενης τετράδας      */
-unsigned int   tempNumber;             /* Αρίθμηση των temporaries       */
 
-static unsigned int   hashTableSize;   /* Μέγεθος πίνακα κατακερματισμού */
-static SymbolEntry ** hashTable;       /* Πίνακας κατακερματισμού        */
+Scope        * currentScope;          
+unsigned int   quadNext;              
+unsigned int   tempNumber;            
+
+static unsigned int   hashTableSize;  
+static SymbolEntry ** hashTable;      
 
 static struct Type_tag typeConst [] = {
     { TYPE_VOID,    NULL, 0, 0 },
@@ -57,19 +30,13 @@ const Type typeChar    = &(typeConst[3]);
 const Type typeReal    = &(typeConst[4]);
 
 
-/* ---------------------------------------------------------------------
-   ------- Υλοποίηση βοηθητικών συναρτήσεων του πίνακα συμβόλων --------
-   --------------------------------------------------------------------- */
+
 
 typedef unsigned long int HashType;
 
 static HashType PJW_hash (const char * key)
 {
-    /*
-     *  P.J. Weinberger's hashing function. See also:
-     *  Aho A.V., Sethi R. & Ullman J.D, "Compilers: Principles,
-     *  Techniques and Tools", Addison Wesley, 1986, pp. 433-437.
-     */
+   
 
     const HashType PJW_OVERFLOW =
         (((HashType) 0xf) << (8 * sizeof(HashType) - 4));
@@ -129,21 +96,19 @@ void strAppendString (char * buffer, RepString str)
 }
 
 
-/* ---------------------------------------------------------------------
-   ------ Υλοποίηση των συναρτήσεων χειρισμού του πίνακα συμβόλων ------
-   --------------------------------------------------------------------- */
+
 
 void initSymbolTable (unsigned int size)
 {
     unsigned int i;
     
-    /* Διάφορες αρχικοποιήσεις */
+   
     
     currentScope = NULL;
     quadNext     = 1;
     tempNumber   = 1;
     
-    /* Αρχικοποίηση του πίνακα κατακερματισμού */
+   
     
     hashTableSize = size;
     hashTable = (SymbolEntry **) new(size * sizeof(SymbolEntry *));
@@ -156,7 +121,7 @@ void destroySymbolTable ()
 {
     unsigned int i;
     
-    /* Καταστροφή του πίνακα κατακερματισμού */
+   
     
     for (i = 0; i < hashTableSize; i++)
         if (hashTable[i] != NULL)
@@ -210,7 +175,7 @@ static SymbolEntry * newEntry (const char * name)
 {
     SymbolEntry * e;
     
-    /* Έλεγχος αν υπάρχει ήδη */
+   
     
     for (e = currentScope->entries; e != NULL; e = e->nextInScope)
         if (strcmp(name, e->id) == 0) {
@@ -218,7 +183,7 @@ static SymbolEntry * newEntry (const char * name)
             return NULL;
         }
 
-    /* Αρχικοποίηση όλων εκτός: entryType και u */
+   
 
     e = (SymbolEntry *) new(sizeof(SymbolEntry));
     e->id = (const char *) new(strlen(name) + 1);
@@ -263,10 +228,10 @@ SymbolEntry * newConstant (const char * name, Type type, ...)
             value.vInteger = va_arg(ap, RepInteger);
             break;
         case TYPE_BOOLEAN:
-            value.vBoolean = va_arg(ap, int);     /* RepBool is promoted */
+            value.vBoolean = va_arg(ap, int);    
             break;
         case TYPE_CHAR:
-            value.vChar = va_arg(ap, int);        /* RepChar is promoted */
+            value.vChar = va_arg(ap, int);       
             break;
         case TYPE_REAL:
             value.vReal = va_arg(ap, RepReal);
@@ -274,7 +239,7 @@ SymbolEntry * newConstant (const char * name, Type type, ...)
         case TYPE_ARRAY:
             if (equalType(type->refType, typeChar)) {
                 RepString str = va_arg(ap, RepString);
-                
+                // TODO can't new this
                 value.vString = (const char *) new(strlen(str) + 1);
                 strcpy((char *) (value.vString), str);
                 break;
@@ -433,7 +398,7 @@ static unsigned int fixOffset (SymbolEntry * args)
     }
 }
 
-void forwardFunction (SymbolEntry * f)
+void declareFunction (SymbolEntry * f)
 {
     if (f->entryType != ENTRY_FUNCTION)
         internal("Cannot make a non-function forward");
@@ -513,7 +478,7 @@ void destroyEntry (SymbolEntry * e)
             destroyType(e->u.eFunction.resultType);
             break;
         case ENTRY_PARAMETER:
-            /* Οι παράμετροι καταστρέφονται μαζί με τη συνάρτηση */
+           
             return;
         case ENTRY_TEMPORARY:
             destroyType(e->u.eTemporary.type);

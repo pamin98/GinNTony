@@ -17,10 +17,10 @@
 #ifndef __GENERAL_HPP__
 #define __GENERAL_HPP__
 
-/*
-void * new    (size_t);
-void   delete (void *);
-*/
+
+// void * new    (size_t);
+// void   delete (void *);
+
 
 extern int lineno;
 extern const char * filename;
