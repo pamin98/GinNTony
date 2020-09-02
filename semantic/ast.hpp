@@ -171,7 +171,7 @@ private:
 class Header : public AST
 {
 public:
-	Header(const char *v, FormalList *fl, Type t, HeaderType D) : functionName(v), formal_list(fl), type(t), T(D) {}
+	Header(const char *v, FormalList *fl, Type t, HeaderType D) : functionName(v), formal_list(fl), type(t), header_type(D) {}
 	~Header()
 	{
 		delete functionName;
@@ -183,7 +183,7 @@ public:
 	{
 		/* newFunction performs check for duplicate declaration in the same scope */
 		SymbolEntry *f = newFunction(functionName);
-		if (!T) /* Declarations should be forwarded */
+		if (header_type == Func_Decl) /* Declarations should be forwarded */
 			declareFunction(f);
 		formal_list->passParameters(f);
 		endFunctionHeader(f, type);
@@ -193,7 +193,7 @@ private:
 	const char *functionName;
 	FormalList *formal_list;
 	Type type;
-	HeaderType T;
+	HeaderType header_type;
 };
 
 class Definition : public AST
