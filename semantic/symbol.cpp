@@ -416,6 +416,7 @@ void endFunctionHeader(SymbolEntry *f, Type type)
         break;
     }
     f->eFunction.pardef = PARDEF_COMPLETE;
+    currentScope->returnType = type;
 }
 
 SymbolEntry *newTemporary(Type type)

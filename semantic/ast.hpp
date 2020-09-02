@@ -12,90 +12,13 @@
 			HEY! CHECK OUT THE "SEM COMPLETED" SECTION!
  ********************************************************************/
 
-enum relOp
-{
-	eq,
-	lt,
-	gt,
-	le,
-	ge,
-	neq
-};
+enum relOp { eq, lt, gt, le, ge, neq };
 
-enum logOp
-{
-	AND,
-	OR,
-	NOT,
-	TRUE,
-	FALSE
-};
+enum logOp { AND, OR, NOT, TRUE, FALSE };
 
-enum listOp
-{
-	nil,
-	nilq,
-	head,
-	tail,
-	append
-};
+enum listOp { nil, nilq, head, tail, append };
 
-enum HeaderType
-{
-	Func_Decl,
-	Func_Def
-};
-
-class Stmt : public AST
-{
-};
-
-class ExitStmt : public Stmt
-{
-public:
-	ExitStmt() {}
-	~ExitStmt() {}
-};
-
-class ReturnStmt : public Stmt
-{
-public:
-	ReturnStmt(Expr *e) : returnExpr(e) {}
-	~ReturnStmt() {}
-
-private:
-	Expr *returnExpr;
-};
-
-class SkipStmt : public Stmt
-{
-public:
-	SkipStmt() {}
-	~SkipStmt() {}
-};
-
-class StmtList : public Stmt
-{
-public:
-	StmtList(Stmt *s)
-	{
-		stmt_list.push_back(s);
-	}
-	~StmtList()
-	{
-		for (Stmt *s : stmt_list)
-			delete s;
-	}
-	
-	virtual void sem() override
-	{
-
-	}
-	void append(Stmt *s) { stmt_list.push_back(s); }
-
-private:
-	std::vector<Stmt *> stmt_list;
-};
+enum HeaderType { Func_Decl, Func_Def };
 
 class For : public Stmt
 {
@@ -154,7 +77,7 @@ public:
 	{
 		sem();
 		if (!equalType(t, type))
-			error("Invalid type of operand. Expected %s, got %s.", TypeToStr(t), TypeToStr(type));
+			error("Invalid type of operand. Expected %s, found %s.", TypeToStr(t), TypeToStr(type));
 	}
 
 	Type getType()
@@ -262,10 +185,8 @@ public:
 		SymbolEntry *f = newFunction(functionName);
 		if (!T) /* Declarations should be forwarded */
 			declareFunction(f);
-		openScope();
 		formal_list->passParameters(f);
 		endFunctionHeader(f, type);
-		closeScope(); /* check scopes here !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! */
 	}
 
 private:
@@ -619,17 +540,17 @@ public:
 			break;
 		case head:
 			if (right->getType()->dtype != TYPE_LIST)
-				error("Expected list, got %s.", TypeToStr(right->getType()));
+				error("Expected list, found %s.", TypeToStr(right->getType()));
 			type = right->getType()->refType;
 			break;
 		case tail:
 			if (right->getType()->dtype != TYPE_LIST)
-				error("Expected list, got %s.", TypeToStr(right->getType()));
+				error("Expected list, found %s.", TypeToStr(right->getType()));
 			type = right->getType();
 			break;
 		case nilq:
 			if (right->getType()->dtype != TYPE_LIST && right->getType()->dtype != TYPE_NIL)
-				error("Expected list, got %s.", TypeToStr(right->getType()));
+				error("Expected list, found %s.", TypeToStr(right->getType()));
 			type = typeBoolean;
 			break;
 		case append:
@@ -664,7 +585,7 @@ public:
 		if (index->getType()->dtype != TYPE_INTEGER)
 			error("Array index must be of type integer.");
 		if (array->getType()->dtype != TYPE_IARRAY)
-			error("Expected array, got %s", TypeToStr(array->getType()));
+			error("Expected array, found %s", TypeToStr(array->getType()));
 
 		type = array->getType()->refType;
 	}
@@ -700,5 +621,68 @@ private:
 	Expr *expr;
 };
 
+class Stmt : public AST
+{
+};
 
+class ExitStmt : public Stmt
+{
+public:
+	ExitStmt() {}
+	~ExitStmt() {}
+
+	virtual void sem() {
+		Type returnType = currentScope->returnType;
+		if(!equalType(returnType, typeVoid))
+			error("Exit called in non-void function.");
+	}
+};
+
+class ReturnStmt : public Stmt
+{
+public:
+	ReturnStmt(Expr *e) : returnExpr(e) {}
+	~ReturnStmt() {}
+
+	virtual void sem() {
+		Type returnType = currentScope->returnType;
+		Type exprType = returnExpr->getType();
+		if(!equalType(exprType, returnType))
+			error("Invalid type of return expression: Expected %s, found %s.",
+			       TypeToStr(returnType), TypeToStr(exprType));
+	}
+private:
+	Expr *returnExpr;
+};
+
+class SkipStmt : public Stmt
+{
+public:
+	SkipStmt() {}
+	~SkipStmt() {}
+};
+
+class StmtList : public Stmt
+{
+public:
+	StmtList(Stmt *s)
+	{
+		stmt_list.push_back(s);
+	}
+	~StmtList()
+	{
+		for (Stmt *s : stmt_list)
+			delete s;
+	}
+	
+	void append(Stmt *s) { stmt_list.push_back(s); }
+
+	virtual void sem() override{ 
+		for(Stmt * s: stmt_list)
+			s->sem();
+	}
+
+private:
+	std::vector<Stmt *> stmt_list;
+};
 

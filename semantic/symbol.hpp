@@ -10,16 +10,15 @@ typedef enum { false=0, true=1 } bool;
 #define START_POSITIVE_OFFSET 8
 #define START_NEGATIVE_OFFSET 0
 
-typedef int RepInteger;
-typedef unsigned char RepBoolean;
-typedef char RepChar;
-typedef long double RepReal;
-typedef const char *RepString;
+typedef int             RepInteger;
+typedef unsigned char   RepBoolean;
+typedef char            RepChar;
+typedef long double     RepReal;
+typedef const char *    RepString;
 
 typedef struct Type_tag *Type;
 
-enum dataType
-{
+enum dataType{
    TYPE_VOID,
    TYPE_INTEGER,
    TYPE_BOOLEAN,
@@ -29,23 +28,20 @@ enum dataType
    TYPE_NIL
 };
 
-enum ParDef
-{
+enum ParDef{
    PARDEF_COMPLETE,
    PARDEF_DEFINE,
    PARDEF_CHECK
 };
 
-struct Type_tag
-{
+struct Type_tag{
    dataType dtype;
    Type refType;
    RepInteger size;
    unsigned int refCount;
 };
 
-typedef enum
-{
+typedef enum{
    ENTRY_VARIABLE,
    ENTRY_CONSTANT,
    ENTRY_FUNCTION,
@@ -53,16 +49,14 @@ typedef enum
    ENTRY_TEMPORARY
 } EntryType;
 
-typedef enum
-{
+typedef enum{
    PASS_BY_VALUE,
    PASS_BY_REFERENCE
 } PassMode;
 
 typedef struct SymbolEntry_tag SymbolEntry;
 
-struct SymbolEntry_tag
-{
+struct SymbolEntry_tag{
    const char *id;
    EntryType entryType;
    unsigned int nestingLevel;
@@ -70,19 +64,15 @@ struct SymbolEntry_tag
    SymbolEntry *nextHash;
    SymbolEntry *nextInScope;
 
-   union
-   {
-      struct
-      {
+   union{
+      struct{
          Type type;
          int offset;
       } eVariable;
 
-      struct
-      {
+      struct{
          Type type;
-         union
-         {
+         union{
             RepInteger vInteger;
             RepBoolean vBoolean;
             RepChar vChar;
@@ -91,8 +81,7 @@ struct SymbolEntry_tag
          } value;
       } eConstant;
 
-      struct
-      {
+      struct{
          bool isForward;
          SymbolEntry *firstArgument;
          SymbolEntry *lastArgument;
@@ -101,16 +90,14 @@ struct SymbolEntry_tag
          int firstQuad;
       } eFunction;
 
-      struct
-      {
+      struct{
          Type type;
          int offset;
          PassMode mode;
          SymbolEntry *next;
       } eParameter;
 
-      struct
-      {
+      struct{
          Type type;
          int offset;
          int number;
@@ -123,18 +110,15 @@ struct SymbolEntry_tag
 typedef struct Scope_tag Scope;
 
 
-struct Scope_tag
-{
+struct Scope_tag{
    unsigned int nestingLevel;
    unsigned int negOffset;
    Scope *parent;
    SymbolEntry *entries;
    Type returnType;
-   //SymbolEntry currentFunction;
 };
 
-typedef enum
-{
+typedef enum{
    LOOKUP_CURRENT_SCOPE,
    LOOKUP_ALL_SCOPES
 } LookupType;
@@ -149,33 +133,33 @@ extern const Type typeBoolean;
 extern const Type typeChar;
 extern const Type typeNil;
 
-void initSymbolTable(unsigned int size);
-void destroySymbolTable(void);
+void            initSymbolTable     (unsigned int size);
+void            destroySymbolTable  (void);
 
-void openScope(void);
-void closeScope(void);
+void            openScope           (void);
+void            closeScope          (void);
 
-SymbolEntry *newVariable(const char *name, Type type);
-SymbolEntry *newConstant(const char *name, Type type, ...);
-SymbolEntry *newFunction(const char *name);
-SymbolEntry *newParameter(const char *name, Type type,
-                          PassMode mode, SymbolEntry *f);
-SymbolEntry *newTemporary(Type type);
+SymbolEntry *   newVariable         (const char *name, Type type);
+SymbolEntry *   newConstant         (const char *name, Type type, ...);
+SymbolEntry *   newFunction         (const char *name);
+SymbolEntry *   newParameter        (const char *name, Type type,
+                                    PassMode mode, SymbolEntry *f);
+SymbolEntry *   newTemporary        (Type type);
 
-void declareFunction(SymbolEntry *f);
-void endFunctionHeader(SymbolEntry *f, Type type);
-void destroyEntry(SymbolEntry *e);
-SymbolEntry *lookupEntry(const char *name, LookupType type,
-                         bool err);
+void            declareFunction     (SymbolEntry *f);
+void            endFunctionHeader   (SymbolEntry *f, Type type);
+void            destroyEntry        (SymbolEntry *e);
+SymbolEntry *   lookupEntry         (const char *name, LookupType type,
+                                    bool err);
 
-Type typeArray(RepInteger size, Type refType);
-Type typeIArray(Type refType);
-Type typeList(Type refType);
-void destroyType(Type type);
-unsigned int sizeOfType(Type type);
-bool equalType(Type type1, Type type2);
-void printType(Type type);
-void printMode(PassMode mode);
-const char *TypeToStr(Type type);
+Type            typeArray           (RepInteger size, Type refType);
+Type            typeIArray          (Type refType);
+Type            typeList            (Type refType);
+void            destroyType         (Type type);
+unsigned int    sizeOfType          (Type type);
+bool            equalType           (Type type1, Type type2);
+void            printType           (Type type);
+void            printMode           (PassMode mode);
+const char *    TypeToStr           (Type type);
 
 #endif
