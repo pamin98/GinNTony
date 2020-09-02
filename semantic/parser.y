@@ -9,6 +9,7 @@
 #include "lexer.hpp"
 #include "symbol.hpp"
 
+// ST_SIZE must be a prime number
 #define 	ST_SIZE 	257
 %}
 
@@ -171,12 +172,13 @@ var_list:
 		|	var_list ',' T_var			{ $1->append($3); $$ = $1; }
 	; 
 
+// TODO add primitive data type
 type:
 		  "int"							{ $$ = typeInteger; }
 		| "bool"						{ $$ = typeBoolean; }
 		| "char"						{ $$ = typeChar; }
 		| type '[' ']'					{ $$ = typeIArray($1); }
-		| "list" '[' type ']'			{ $$ = typePointer($3); };
+		| "list" '[' type ']'			{ $$ = typeList($3); };
 		;
 
 
@@ -268,7 +270,8 @@ expr:
 
 %%
 
-int main(){
+int main()
+{
 	initSymbolTable(ST_SIZE);
 	return yyparse();
 }

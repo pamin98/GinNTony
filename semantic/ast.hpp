@@ -40,11 +40,11 @@ enum listOp
 	append
 };
 
-typedef enum HeaderType
+enum HeaderType
 {
 	Func_Decl,
 	Func_Def
-} HeaderType;
+};
 
 class Stmt : public AST
 {
@@ -74,22 +74,6 @@ public:
 	~SkipStmt() {}
 };
 
-class ListOp : public Expr
-{
-public:
-	ListOp(listOp o, Expr *l = NULL, Expr *r = NULL) : left(l), op(o), right(r) {}
-	~ListOp()
-	{
-		delete left;
-		delete right;
-	}
-
-private:
-	Expr *left;
-	listOp op;
-	Expr *right;
-};
-
 class StmtList : public Stmt
 {
 public:
@@ -101,6 +85,11 @@ public:
 	{
 		for (Stmt *s : stmt_list)
 			delete s;
+	}
+	
+	virtual void sem() override
+	{
+
 	}
 	void append(Stmt *s) { stmt_list.push_back(s); }
 
@@ -145,35 +134,7 @@ private:
 	If *nextIf;
 };
 
-class ArrayIndexing : public Expr
-{
-public:
-	ArrayIndexing(Expr *a, Expr *i) : array(a), index(i) {}
-	~ArrayIndexing()
-	{
-		delete array;
-		delete index;
-	}
 
-private:
-	Expr *array;
-	Expr *index;
-};
-
-class ArrayInit : public Expr
-{
-public:
-	ArrayInit(std::string *t, Expr *e) : type(t), expr(e){};
-	~ArrayInit()
-	{
-		delete type;
-		delete expr;
-	}
-
-private:
-	std::string *type;
-	Expr *expr;
-};
 
 /****************************************************************************************************************
  ************************************************ SEM COMPLETED *************************************************
@@ -196,7 +157,7 @@ public:
 			error("Invalid type of operand. Expected %s, got %s.", TypeToStr(t), TypeToStr(type));
 	}
 
-	Type get_type()
+	Type getType()
 	{
 		sem();
 		return type;
@@ -216,7 +177,7 @@ public:
 	virtual void sem() override
 	{
 		SymbolEntry *e = lookupEntry(var, LOOKUP_ALL_SCOPES, true);
-		type = e->u.eVariable.type;
+		type = e->eVariable.type;
 	}
 
 private:
@@ -276,7 +237,6 @@ public:
 
 	virtual void passParameters(SymbolEntry *f)
 	{
-		// TODO thelei symbolEntry input iparxei mperdema meta3i ton dio f edw
 		for (Formal *formal : formal_list)
 			formal->passParameters(f);
 	}
@@ -449,20 +409,19 @@ public:
 	{
 		int functionArguments = 0;
 		bool argMismatch = false;
-		// TODO fix lookupEntry needs more arguments
 		SymbolEntry *f = lookupEntry(functionName, LOOKUP_ALL_SCOPES, true);
-		if (f->u.eFunction.isForward)
+		if (f->eFunction.isForward)
 			error("Function %s declared but not defined.", functionName);
-		type = f->u.eFunction.resultType;
+		type = f->eFunction.resultType;
 		SymbolEntry *args;
-		args = f->u.eFunction.firstArgument;
+		args = f->eFunction.firstArgument;
 		for (Expr *e : expr_list->getList())
 		{
 			Type paramType;
 			if (args)
 			{
 				++functionArguments;
-				paramType = args->u.eParameter.type;
+				paramType = args->eParameter.type;
 			}
 			else
 			{
@@ -470,7 +429,7 @@ public:
 				break;
 			}
 			e->type_check(paramType);
-			args = args->u.eParameter.next;
+			args = args->eParameter.next;
 		}
 		if (argMismatch)
 			error("Expected %d arguments for function %s, but %lu were given.",
@@ -480,7 +439,7 @@ public:
 			while (args)
 			{
 				++functionArguments;
-				args = args->u.eParameter.next;
+				args = args->eParameter.next;
 			}
 			error("Expected %d arguments for function %s, but %lu were given.",
 				  functionArguments, functionName, expr_list->getList().size());
@@ -543,7 +502,7 @@ public:
 	virtual void sem() override
 	{
 		left->checkLVal();
-		Type ltype = left->get_type();
+		Type ltype = left->getType();
 		right->type_check(ltype);
 	}
 
@@ -588,8 +547,8 @@ public:
 
 	virtual void sem() override
 	{
-		Type leftType = left->get_type();
-		Type rightType = right->get_type();
+		Type leftType = left->getType();
+		Type rightType = right->getType();
 		if (!equalType(leftType, rightType))
 			error("Operands of comparison have different types: %s and %s.", TypeToStr(leftType), TypeToStr(rightType));
 		if (leftType->dtype == TYPE_INTEGER || leftType->dtype == TYPE_BOOLEAN || leftType->dtype == TYPE_CHAR)
@@ -640,3 +599,106 @@ private:
 	logOp op;
 	Expr *right;
 };
+
+class ListOp : public Expr
+{
+public:
+	ListOp(listOp o, Expr *l = NULL, Expr *r = NULL) : left(l), op(o), right(r) {}
+	~ListOp()
+	{
+		delete left;
+		delete right;
+	}
+
+	virtual void sem() override
+	{
+		switch (op)
+		{
+		case nil:
+			type = typeNil;
+			break;
+		case head:
+			if (right->getType()->dtype != TYPE_LIST)
+				error("Expected list, got %s.", TypeToStr(right->getType()));
+			type = right->getType()->refType;
+			break;
+		case tail:
+			if (right->getType()->dtype != TYPE_LIST)
+				error("Expected list, got %s.", TypeToStr(right->getType()));
+			type = right->getType();
+			break;
+		case nilq:
+			if (right->getType()->dtype != TYPE_LIST && right->getType()->dtype != TYPE_NIL)
+				error("Expected list, got %s.", TypeToStr(right->getType()));
+			type = typeBoolean;
+			break;
+		case append:
+			if (right->getType()->dtype = TYPE_NIL)
+				type = typeList(left->getType());
+			else if (!equalType(left->getType(), right->getType()->refType))
+			{
+				error("Cannot append %s to %s.", TypeToStr(left->getType()), TypeToStr(right->getType()));
+				type = right->getType();
+			}
+		}
+	}
+
+private:
+	Expr *left;
+	listOp op;
+	Expr *right;
+};
+
+class ArrayIndexing : public Expr
+{
+public:
+	ArrayIndexing(Expr *a, Expr *i) : array(a), index(i) {}
+	~ArrayIndexing()
+	{
+		delete array;
+		delete index;
+	}
+
+	virtual void sem() override
+	{
+		if (index->getType()->dtype != TYPE_INTEGER)
+			error("Array index must be of type integer.");
+		if (array->getType()->dtype != TYPE_IARRAY)
+			error("Expected array, got %s", TypeToStr(array->getType()));
+
+		type = array->getType()->refType;
+	}
+
+private:
+	Expr *array;
+	Expr *index;
+};
+
+class ArrayInit : public Expr
+{
+public:
+	ArrayInit(Type t, Expr *e) : refT(t), expr(e){};
+	~ArrayInit()
+	{
+		delete type;
+		delete refT;
+		delete expr;
+	}
+
+	virtual void sem() override
+	{
+		if (refT->dtype != TYPE_INTEGER && refT->dtype != TYPE_BOOLEAN && refT->dtype != TYPE_CHAR)
+			error("Arrays of integers, booleans and characters are only supported.");
+
+		type = typeIArray(refT);
+		if (expr->getType()->dtype != TYPE_INTEGER)
+			error("Array size must be of type integer.");
+	}
+
+private:
+	Type refT;
+	Expr *expr;
+};
+
+
+

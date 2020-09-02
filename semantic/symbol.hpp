@@ -22,13 +22,18 @@ enum dataType
 {
    TYPE_VOID,
    TYPE_INTEGER,
-   TYPE_REAL,
    TYPE_BOOLEAN,
    TYPE_CHAR,
-   TYPE_ARRAY,
    TYPE_IARRAY,
-   TYPE_POINTER,
+   TYPE_LIST,
    TYPE_NIL
+};
+
+enum ParDef
+{
+   PARDEF_COMPLETE,
+   PARDEF_DEFINE,
+   PARDEF_CHECK
 };
 
 struct Type_tag
@@ -67,7 +72,6 @@ struct SymbolEntry_tag
 
    union
    {
-
       struct
       {
          Type type;
@@ -93,12 +97,7 @@ struct SymbolEntry_tag
          SymbolEntry *firstArgument;
          SymbolEntry *lastArgument;
          Type resultType;
-         enum
-         {
-            PARDEF_COMPLETE,
-            PARDEF_DEFINE,
-            PARDEF_CHECK
-         } pardef;
+         ParDef pardef;
          int firstQuad;
       } eFunction;
 
@@ -117,10 +116,12 @@ struct SymbolEntry_tag
          int number;
       } eTemporary;
 
-   } u;
+   };
 };
 
+
 typedef struct Scope_tag Scope;
+
 
 struct Scope_tag
 {
@@ -128,6 +129,8 @@ struct Scope_tag
    unsigned int negOffset;
    Scope *parent;
    SymbolEntry *entries;
+   Type returnType;
+   //SymbolEntry currentFunction;
 };
 
 typedef enum
@@ -144,7 +147,7 @@ extern const Type typeVoid;
 extern const Type typeInteger;
 extern const Type typeBoolean;
 extern const Type typeChar;
-extern const Type typeReal;
+extern const Type typeNil;
 
 void initSymbolTable(unsigned int size);
 void destroySymbolTable(void);
@@ -167,7 +170,7 @@ SymbolEntry *lookupEntry(const char *name, LookupType type,
 
 Type typeArray(RepInteger size, Type refType);
 Type typeIArray(Type refType);
-Type typePointer(Type refType);
+Type typeList(Type refType);
 void destroyType(Type type);
 unsigned int sizeOfType(Type type);
 bool equalType(Type type1, Type type2);

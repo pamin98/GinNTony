@@ -23,8 +23,8 @@
 #include "general.hpp"
 #include "error.hpp"
 
-/*
-void * new (size_t size)
+
+void *allocate(size_t size)
 {
    void * result = malloc(size);
    
@@ -33,12 +33,12 @@ void * new (size_t size)
    return result;
 }
 
-void delete (void * p)
+void deallocate(void * p)
 {
    if (p != NULL)
       free(p);
 }
-*/
+
 
 
 const char * filename;
