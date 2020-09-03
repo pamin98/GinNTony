@@ -240,7 +240,7 @@ atom:
 expr:
 		  atom						  	{ $$ = $1; }
 		| T_constInt					{ $$ = new ConstInt($1); }
-		| T_constChar					{ $$ = new ConstInt($1); }
+		| T_constChar					{ $$ = new ConstChar($1); }
 		| '(' expr ')'					{ $$ = $2; }
 		| '+' expr %prec UPLUS			{ $$ = new BinOp(NULL,'+',$2); }
 		| '-' expr %prec UMINUS			{ $$ = new BinOp(NULL,'-',$2); }

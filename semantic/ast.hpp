@@ -7,14 +7,41 @@
 #include <algorithm>
 #include "symbol.hpp"
 #include "error.hpp"
+#include <string.h>
 
-enum relOp { eq, lt, gt, le, ge, neq };
+enum relOp
+{
+	eq,
+	lt,
+	gt,
+	le,
+	ge,
+	neq
+};
 
-enum logOp { AND, OR, NOT, TRUE, FALSE };
+enum logOp
+{
+	AND,
+	OR,
+	NOT,
+	TRUE,
+	FALSE
+};
 
-enum listOp { nil, nilq, head, tail, append };
+enum listOp
+{
+	nil,
+	nilq,
+	head,
+	tail,
+	append
+};
 
-enum HeaderType { Func_Decl, Func_Def };
+enum HeaderType
+{
+	Func_Decl,
+	Func_Def
+};
 
 class AST
 {
@@ -62,11 +89,12 @@ public:
 		for (Stmt *s : stmt_list)
 			delete s;
 	}
-	
+
 	void append(Stmt *s) { stmt_list.push_back(s); }
 
-	virtual void sem() override{ 
-		for(Stmt * s: stmt_list)
+	virtual void sem() override
+	{
+		for (Stmt *s : stmt_list)
 			s->sem();
 	}
 
@@ -123,7 +151,7 @@ public:
 	virtual void passParameters(SymbolEntry *f)
 	{
 		for (const char *v : var_list->getList())
-			SymbolEntry *e = newParameter(v, type, mode, f);
+			newParameter(v, type, mode, f);
 	}
 
 private:
@@ -269,7 +297,7 @@ public:
 	virtual void sem() override
 	{
 		for (const char *variable : var_list->getList())
-			SymbolEntry *e = newVariable(variable, type);
+			newVariable(variable, type);
 	}
 
 private:
@@ -310,6 +338,9 @@ public:
 
 	virtual void sem() override
 	{
+		if(strcmp(functionName,"puts")==0 || strcmp(functionName,"putc")==0 || strcmp(functionName,"geti")==0)
+			return;
+
 		int functionArguments = 0;
 		bool argMismatch = false;
 		SymbolEntry *f = lookupEntry(functionName, LOOKUP_ALL_SCOPES, true);
@@ -392,6 +423,20 @@ private:
 	int num;
 };
 
+class ConstChar : public Expr
+{
+public:
+	ConstChar(char c) : c(c) {}
+
+	virtual void sem() override
+	{
+		type = typeChar;
+	}
+
+private:
+	char c;
+};
+
 class BinOp : public Expr
 {
 public:
@@ -404,8 +449,16 @@ public:
 
 	virtual void sem() override
 	{
+		if(right==NULL)
+			std::cout << "right in null" << std::endl;
+		std::cout << op << std::endl;
+		std::cout << right->getType()->dtype << std::endl;
+
+
 		right->type_check(typeInteger);
-		if (left)
+		if(left==NULL)
+			std::cout << "LEFT NULL" << std::endl;
+		if (left!=NULL)
 			left->type_check(typeInteger);
 		type = typeInteger;
 	}
@@ -609,9 +662,10 @@ public:
 	ExitStmt() {}
 	~ExitStmt() {}
 
-	virtual void sem() {
+	virtual void sem()
+	{
 		Type returnType = currentScope->returnType;
-		if(!equalType(returnType, typeVoid))
+		if (!equalType(returnType, typeVoid))
 			error("Exit called in non-void function.");
 	}
 };
@@ -622,13 +676,15 @@ public:
 	ReturnStmt(Expr *e) : returnExpr(e) {}
 	~ReturnStmt() {}
 
-	virtual void sem() {
+	virtual void sem()
+	{
 		Type returnType = currentScope->returnType;
 		Type exprType = returnExpr->getType();
-		if(!equalType(exprType, returnType))
+		if (!equalType(exprType, returnType))
 			error("Invalid type of return expression: Expected %s, found %s.",
-			       TypeToStr(returnType), TypeToStr(exprType));
+				  TypeToStr(returnType), TypeToStr(exprType));
 	}
+
 private:
 	Expr *returnExpr;
 };
@@ -640,39 +696,46 @@ public:
 	~SkipStmt() {}
 };
 
-class If : public Stmt {
+class If : public Stmt
+{
 public:
 	If(Expr *c, StmtList *s, If *next = NULL) : cond(c), stmt_list(s), nextIf(next) {}
-	~If(){
+	~If()
+	{
 		delete cond;
 		delete stmt_list;
 		delete nextIf;
 	}
 	void append(If *i) { nextIf = i; }
 
-	virtual void sem () override {
+	virtual void sem() override
+	{
 		cond->type_check(typeBoolean);
 		stmt_list->sem();
-		if(!nextIf)
+		if (nextIf != NULL)
 			nextIf->sem();
 	}
+
 private:
 	Expr *cond;
 	StmtList *stmt_list;
 	If *nextIf;
 };
 
-class For : public Stmt {
+class For : public Stmt
+{
 public:
 	For(StmtList *s1, Expr *e, StmtList *s2, StmtList *s3) : initializers(s1), threshold(e), steps(s2), loop_body(s3) {}
-	~For() {
+	~For()
+	{
 		delete threshold;
 		delete initializers;
 		delete steps;
 		delete loop_body;
 	}
 
-	virtual void sem() override {
+	virtual void sem() override
+	{
 		initializers->sem();
 		threshold->type_check(typeBoolean);
 		steps->sem();
