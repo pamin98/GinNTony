@@ -206,7 +206,7 @@ else:
 		;
 
 simple:
-		  "skip"						{  }
+		  "skip"						{ $$ = new SkipStmt(); }
 		| atom ":=" expr				{ $$ = new AssignStmt($1,$3); }
 		| call							{ $$ = $1; }
 		;
@@ -273,5 +273,8 @@ expr:
 int main()
 {
 	initSymbolTable(ST_SIZE);
-	return yyparse();
+	openScope();
+	int result = yyparse();
+	destroySymbolTable();
+	return result;
 }

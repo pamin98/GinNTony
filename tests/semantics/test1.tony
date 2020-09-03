@@ -1,0 +1,16 @@
+def dummy():
+	int x,y,q
+	char z
+	def helper_fun(int x,y; char z):
+		skip
+	end
+
+	x := helper_fun(x,y,z,q)
+	if x <> y:
+		z := 'a'
+%	elsif  x<>z:
+%		z := '2'
+	end
+
+end
+	

@@ -1,6 +1,6 @@
 def solve ():
 	
-	def hanoi (int tings; char[] source, target, auxiliary):
+	def hanoi (int rings; char[] source, target, auxiliary):
 
 		def move (char[] source, target):
 			puts("Moving from ") puts(source) puts(" to ") puts(target) puts(".\n")

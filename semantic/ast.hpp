@@ -195,6 +195,7 @@ public:
 		SymbolEntry *f = newFunction(functionName);
 		if (header_type == Func_Decl) /* Declarations should be forwarded */
 			declareFunction(f);
+		openScope();
 		formal_list->passParameters(f);
 		endFunctionHeader(f, type);
 	}
@@ -251,7 +252,6 @@ public:
 
 	virtual void sem() override
 	{
-		openScope();
 		header->sem();
 		def_list->sem();
 		stmt_list->sem();
@@ -275,7 +275,6 @@ public:
 
 	virtual void sem() override
 	{
-		openScope();
 		header->sem();
 		closeScope();
 	}
