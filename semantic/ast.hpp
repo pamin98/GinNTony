@@ -8,10 +8,6 @@
 #include <symbol.cpp>
 #include <error.hpp>
 
-/********************************************************************
-			HEY! CHECK OUT THE "SEM COMPLETED" SECTION!
- ********************************************************************/
-
 enum relOp { eq, lt, gt, le, ge, neq };
 
 enum logOp { AND, OR, NOT, TRUE, FALSE };
@@ -20,48 +16,6 @@ enum listOp { nil, nilq, head, tail, append };
 
 enum HeaderType { Func_Decl, Func_Def };
 
-class For : public Stmt
-{
-public:
-	For(StmtList *s1, Expr *e, StmtList *s2, StmtList *s3) : initializers(s1), threshold(e), steps(s2), loop_body(s3) {}
-	~For()
-	{
-		delete threshold;
-		delete initializers;
-		delete steps;
-		delete loop_body;
-	}
-
-private:
-	Expr *threshold;
-	Stmt *initializers;
-	Stmt *steps;
-	StmtList *loop_body;
-};
-
-class If : public Stmt
-{
-public:
-	If(Expr *c, StmtList *s, If *next = NULL) : cond(c), stmt_list(s), nextIf(next) {}
-	~If()
-	{
-		delete cond;
-		delete stmt_list;
-		delete nextIf;
-	}
-	void append(If *i) { nextIf = i; }
-
-private:
-	Expr *cond;
-	StmtList *stmt_list;
-	If *nextIf;
-};
-
-
-
-/****************************************************************************************************************
- ************************************************ SEM COMPLETED *************************************************
- ***************************************************************************************************************/
 class AST
 {
 public:
@@ -410,28 +364,6 @@ private:
 	int num;
 };
 
-class AssignStmt : public Stmt
-{
-public:
-	AssignStmt(Expr *l, Expr *r) : left(l), right(r) {}
-	~AssignStmt()
-	{
-		delete left;
-		delete right;
-	}
-
-	virtual void sem() override
-	{
-		left->checkLVal();
-		Type ltype = left->getType();
-		right->type_check(ltype);
-	}
-
-private:
-	Expr *left;
-	Expr *right;
-};
-
 class BinOp : public Expr
 {
 public:
@@ -625,6 +557,28 @@ class Stmt : public AST
 {
 };
 
+class AssignStmt : public Stmt
+{
+public:
+	AssignStmt(Expr *l, Expr *r) : left(l), right(r) {}
+	~AssignStmt()
+	{
+		delete left;
+		delete right;
+	}
+
+	virtual void sem() override
+	{
+		left->checkLVal();
+		Type ltype = left->getType();
+		right->type_check(ltype);
+	}
+
+private:
+	Expr *left;
+	Expr *right;
+};
+
 class ExitStmt : public Stmt
 {
 public:
@@ -686,3 +640,48 @@ private:
 	std::vector<Stmt *> stmt_list;
 };
 
+class If : public Stmt {
+public:
+	If(Expr *c, StmtList *s, If *next = NULL) : cond(c), stmt_list(s), nextIf(next) {}
+	~If(){
+		delete cond;
+		delete stmt_list;
+		delete nextIf;
+	}
+	void append(If *i) { nextIf = i; }
+
+	virtual void sem () override {
+		cond->type_check(typeBoolean);
+		stmt_list->sem();
+		if(!nextIf)
+			nextIf->sem();
+	}
+private:
+	Expr *cond;
+	StmtList *stmt_list;
+	If *nextIf;
+};
+
+class For : public Stmt {
+public:
+	For(StmtList *s1, Expr *e, StmtList *s2, StmtList *s3) : initializers(s1), threshold(e), steps(s2), loop_body(s3) {}
+	~For() {
+		delete threshold;
+		delete initializers;
+		delete steps;
+		delete loop_body;
+	}
+
+	virtual void sem() override {
+		initializers->sem();
+		threshold->type_check(typeBoolean);
+		steps->sem();
+		loop_body->sem();
+	}
+
+private:
+	Expr *threshold;
+	Stmt *initializers;
+	Stmt *steps;
+	StmtList *loop_body;
+};
