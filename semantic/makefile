@@ -13,7 +13,7 @@ lexer.o: lexer.cpp lexer.hpp parser.hpp ast.hpp general.hpp error.hpp
 parser.hpp parser.cpp: parser.y
 	bison -dv -o parser.cpp parser.y
 
-parser.o: parser.cpp lexer.hpp ast.hpp 
+parser.o: parser.cpp lexer.hpp ast.hpp symbol.cpp symbol.hpp general.hpp error.hpp
 
 GinNTony: lexer.o parser.o 
 	$(CXX) $(CXXFLAGS) -o GinNTony lexer.o parser.o error.cpp general.cpp
