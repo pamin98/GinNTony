@@ -5,8 +5,8 @@
 #include <vector>
 #include <string>
 #include <algorithm>
-#include <symbol.cpp>
-#include <error.hpp>
+#include "symbol.hpp"
+#include "error.hpp"
 
 enum relOp { eq, lt, gt, le, ge, neq };
 
@@ -44,6 +44,34 @@ public:
 
 protected:
 	Type type;
+};
+
+class Stmt : public AST
+{
+};
+
+class StmtList : public Stmt
+{
+public:
+	StmtList(Stmt *s)
+	{
+		stmt_list.push_back(s);
+	}
+	~StmtList()
+	{
+		for (Stmt *s : stmt_list)
+			delete s;
+	}
+	
+	void append(Stmt *s) { stmt_list.push_back(s); }
+
+	virtual void sem() override{ 
+		for(Stmt * s: stmt_list)
+			s->sem();
+	}
+
+private:
+	std::vector<Stmt *> stmt_list;
 };
 
 class Var : public Expr
@@ -486,7 +514,7 @@ public:
 			type = typeBoolean;
 			break;
 		case append:
-			if (right->getType()->dtype = TYPE_NIL)
+			if (right->getType()->dtype == TYPE_NIL)
 				type = typeList(left->getType());
 			else if (!equalType(left->getType(), right->getType()->refType))
 			{
@@ -553,10 +581,6 @@ private:
 	Expr *expr;
 };
 
-class Stmt : public AST
-{
-};
-
 class AssignStmt : public Stmt
 {
 public:
@@ -616,30 +640,6 @@ public:
 	~SkipStmt() {}
 };
 
-class StmtList : public Stmt
-{
-public:
-	StmtList(Stmt *s)
-	{
-		stmt_list.push_back(s);
-	}
-	~StmtList()
-	{
-		for (Stmt *s : stmt_list)
-			delete s;
-	}
-	
-	void append(Stmt *s) { stmt_list.push_back(s); }
-
-	virtual void sem() override{ 
-		for(Stmt * s: stmt_list)
-			s->sem();
-	}
-
-private:
-	std::vector<Stmt *> stmt_list;
-};
-
 class If : public Stmt {
 public:
 	If(Expr *c, StmtList *s, If *next = NULL) : cond(c), stmt_list(s), nextIf(next) {}
@@ -680,8 +680,8 @@ public:
 	}
 
 private:
-	Expr *threshold;
 	Stmt *initializers;
+	Expr *threshold;
 	Stmt *steps;
 	StmtList *loop_body;
 };

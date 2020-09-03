@@ -248,6 +248,8 @@ SymbolEntry *newConstant(const char *name, Type type, ...)
             strAppendChar(buffer, value.vChar);
             strcat(buffer, "'");
             break;
+        default:
+            internal("Invalid type for constant");
         }
         e = newEntry(buffer);
     }
@@ -270,6 +272,8 @@ SymbolEntry *newConstant(const char *name, Type type, ...)
         case TYPE_CHAR:
             e->eConstant.value.vChar = value.vChar;
             break;
+        default:
+            internal("Invalid type for constant");
         }
     }
     return e;
@@ -554,6 +558,8 @@ void destroyType(Type type)
             destroyType(type->refType);
             delete (type);
         }
+    default:
+        break;
     }
 }
 
@@ -571,6 +577,8 @@ unsigned int sizeOfType(Type type)
     case TYPE_BOOLEAN:
     case TYPE_CHAR:
         return 1;
+    default:
+        break;
     }
     return 0;
 }
@@ -584,6 +592,8 @@ bool equalType(Type type1, Type type2)
     case TYPE_IARRAY:
     case TYPE_LIST:
         return equalType(type1->refType, type2->refType);
+    default:
+        break;
     }
     return true;
 }
@@ -618,6 +628,8 @@ void printType(Type type)
         printf("^");
         printType(type->refType);
         break;
+    case TYPE_NIL:
+        printf("null");
     }
 }
 
