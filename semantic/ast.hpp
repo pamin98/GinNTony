@@ -53,11 +53,9 @@ public:
 class Expr : public AST
 {
 public:
-	//virtual int eval() const = 0;
 	void type_check(Type t)
 	{
 		sem();
-		
 		if (!equalType(t, type))
 			error("Invalid type of operand. Expected %s, found %s.", TypeToStr(t), TypeToStr(type));
 	}
@@ -111,6 +109,8 @@ public:
 	virtual void sem() override
 	{
 		SymbolEntry *e = lookupEntry(var, LOOKUP_ALL_SCOPES, true);
+		if(e->entryType == ENTRY_FUNCTION)
+			error("%s is a function, expected parenthesis",e->id);
 		type = e->eVariable.type;
 	}
 
@@ -338,11 +338,11 @@ public:
 
 	virtual void sem() override
 	{
-		if( strcmp(functionName,"geti")==0 )
+		if (strcmp(functionName, "geti") == 0)
 			type = typeInteger;
-		if( strcmp(functionName,"getc")==0 )
+		if (strcmp(functionName, "getc") == 0)
 			type = typeChar;
-		if(strcmp(functionName,"puts")==0 || strcmp(functionName,"putc")==0 || strcmp(functionName,"geti")==0 || strcmp(functionName,"puti")==0 || strcmp(functionName,"getc")==0)
+		if (strcmp(functionName, "puts") == 0 || strcmp(functionName, "putc") == 0 || strcmp(functionName, "geti") == 0 || strcmp(functionName, "puti") == 0 || strcmp(functionName, "getc") == 0)
 			return;
 
 		int functionArguments = 0;
@@ -454,7 +454,7 @@ public:
 	virtual void sem() override
 	{
 		right->type_check(typeInteger);
-		if (left!=NULL)
+		if (left != NULL)
 			left->type_check(typeInteger);
 		type = typeInteger;
 	}
@@ -706,7 +706,7 @@ public:
 
 	virtual void sem() override
 	{
-		if(cond != NULL)
+		if (cond != NULL)
 		{
 			cond->type_check(typeBoolean);
 		}
