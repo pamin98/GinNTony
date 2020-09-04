@@ -19,7 +19,7 @@ GinNTony: lexer.o parser.o
 	$(CXX) $(CXXFLAGS) -o GinNTony lexer.o parser.o error.cpp general.cpp symbol.cpp
 
 clean:
-	$(RM) lexer.cpp parser.cpp parser.hpp parser.output *.o GinNTony
+	$(RM) lexer.cpp parser.cpp parser.hpp parser.output *.o 
 
 distclean: clean
 	$(RM) GinNTony

@@ -1,21 +1,22 @@
 def dummy():
-	int x,y,q
-	char z
 	decl dummy2()
 	def helper_fun(int x,y; char z):
 		dummy2()
 		skip
 	end
+	int x,y,q,z
 	def dummy2():
 		skip
 	end
-
-	helper_fun(x,y,z)
+	list [int] l
+	l := 2 # 3 # 4 # nil
+%	x := new int[16]
+%	y := new int[16]
+%	helper_fun(x,y)
 	if x <> y:
-		x := 5+dummy2()
-		z := 'a'
-%	elsif  x<>z:
-%		z := '2'
+		z := 2
+	elsif  x<>z:
+		z := head(l)
 	end
 end
 

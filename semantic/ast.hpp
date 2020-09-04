@@ -55,14 +55,16 @@ class Expr : public AST
 public:
 	void type_check(Type t)
 	{
-		sem();
+		if(type == NULL)
+			sem();
 		if (!equalType(t, type))
 			error("Invalid type of operand. Expected %s, found %s.", TypeToStr(t), TypeToStr(type));
 	}
 
 	Type getType()
 	{
-		sem();
+		if(type == NULL)
+			sem();
 		return type;
 	}
 
@@ -348,8 +350,6 @@ public:
 		int functionArguments = 0;
 		bool argMismatch = false;
 		SymbolEntry *f = lookupEntry(functionName, LOOKUP_ALL_SCOPES, true);
-		// if (f->eFunction.isForward)
-		// 	error("Function %s declared but not defined.", functionName);
 		type = f->eFunction.resultType;
 		SymbolEntry *args;
 		args = f->eFunction.firstArgument;
@@ -563,13 +563,14 @@ public:
 			type = typeBoolean;
 			break;
 		case append:
-			if (right->getType()->dtype == TYPE_NIL)
+			if (right->getType()->dtype == TYPE_NIL){
 				type = typeList(left->getType());
-			else if (!equalType(left->getType(), right->getType()->refType))
-			{
-				error("Cannot append %s to %s.", TypeToStr(left->getType()), TypeToStr(right->getType()));
-				type = right->getType();
+				break;
 			}
+			else if (!equalType(left->getType(), right->getType()->refType)){
+				error("Cannot append %s to %s.", TypeToStr(left->getType()), TypeToStr(right->getType()));
+			}
+			type = right->getType();
 		}
 	}
 
