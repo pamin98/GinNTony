@@ -72,7 +72,7 @@ void error (const char * fmt, ...)
    vfprintf(stderr, fmt, ap);
    fprintf(stderr, "\n");
    va_end(ap);
-   exit(1);
+ //  exit(1);
 }
 
 void warning (const char * fmt, ...)

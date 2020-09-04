@@ -645,6 +645,8 @@ public:
 	{
 		left->checkLVal();
 		Type ltype = left->getType();
+		printf("Type of lvalue: %s.\n", TypeToStr(ltype));
+		printf("Checking type of rvalue.\n");
 		right->type_check(ltype);
 	}
 

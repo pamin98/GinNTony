@@ -8,8 +8,16 @@ def dummy():
 	def dummy2():
 		skip
 	end
+	int[] array
 	list [int] l
-	l := 2 # 3 # 4 # nil
+	bool b,c,d
+
+	array := new int[10]
+	array[3] := 42
+	l := 2 # 3 # (4 # nil)
+	b := nil?(tail(l))
+	c := nil?(nil)
+	d := nil?(z)
 %	x := new int[16]
 %	y := new int[16]
 %	helper_fun(x,y)

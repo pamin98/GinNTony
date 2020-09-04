@@ -668,6 +668,10 @@ const char *TypeToStr(Type type)
         return strdup(buffer);
     case TYPE_NIL:
         return "nil";
+        break;
+    default:
+        sprintf(buffer, "object %d", type->dtype);
+        return strdup(buffer);
     }
     return "undefined";
 }
