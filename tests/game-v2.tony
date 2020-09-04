@@ -16,6 +16,8 @@ def t():
             return true
         elsif board[2] = board[4] and board[4] = board[6] and board[2] <> ' ':
             return true
+        else:
+            return false
         end
         return false
     end

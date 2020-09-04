@@ -1,4 +1,5 @@
 %option noyywrap
+%option yylineno
 %{
 #include <cstdio>
 #include <cstdlib>
@@ -104,6 +105,6 @@ H 		\\x{HD}{HD}
 %%
 
 void yyerror (const char * msg){
-	error(msg);
+	error("Error line number %d",yylineno);
 	exit(1);
 }

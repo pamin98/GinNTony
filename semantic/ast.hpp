@@ -57,6 +57,7 @@ public:
 	void type_check(Type t)
 	{
 		sem();
+		
 		if (!equalType(t, type))
 			error("Invalid type of operand. Expected %s, found %s.", TypeToStr(t), TypeToStr(type));
 	}
@@ -337,14 +338,18 @@ public:
 
 	virtual void sem() override
 	{
-		if(strcmp(functionName,"puts")==0 || strcmp(functionName,"putc")==0 || strcmp(functionName,"geti")==0)
+		if( strcmp(functionName,"geti")==0 )
+			type = typeInteger;
+		if( strcmp(functionName,"getc")==0 )
+			type = typeChar;
+		if(strcmp(functionName,"puts")==0 || strcmp(functionName,"putc")==0 || strcmp(functionName,"geti")==0 || strcmp(functionName,"puti")==0 || strcmp(functionName,"getc")==0)
 			return;
 
 		int functionArguments = 0;
 		bool argMismatch = false;
 		SymbolEntry *f = lookupEntry(functionName, LOOKUP_ALL_SCOPES, true);
-		if (f->eFunction.isForward)
-			error("Function %s declared but not defined.", functionName);
+		// if (f->eFunction.isForward)
+		// 	error("Function %s declared but not defined.", functionName);
 		type = f->eFunction.resultType;
 		SymbolEntry *args;
 		args = f->eFunction.firstArgument;
@@ -448,15 +453,7 @@ public:
 
 	virtual void sem() override
 	{
-		if(right==NULL)
-			std::cout << "right in null" << std::endl;
-		std::cout << op << std::endl;
-		std::cout << right->getType()->dtype << std::endl;
-
-
 		right->type_check(typeInteger);
-		if(left==NULL)
-			std::cout << "LEFT NULL" << std::endl;
 		if (left!=NULL)
 			left->type_check(typeInteger);
 		type = typeInteger;
@@ -709,7 +706,10 @@ public:
 
 	virtual void sem() override
 	{
-		cond->type_check(typeBoolean);
+		if(cond != NULL)
+		{
+			cond->type_check(typeBoolean);
+		}
 		stmt_list->sem();
 		if (nextIf != NULL)
 			nextIf->sem();

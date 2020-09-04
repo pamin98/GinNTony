@@ -1,16 +1,24 @@
+
+
 def dummy():
 	int x,y,q
 	char z
+	decl dummy2()
 	def helper_fun(int x,y; char z):
+		decl dummy25()
+		dummy2()
+		skip
+	end
+	def dummy2():
 		skip
 	end
 
-	x := helper_fun(x,y,z,q)
+	helper_fun(x,y,z)
 	if x <> y:
 		z := 'a'
 %	elsif  x<>z:
 %		z := '2'
 	end
-
 end
+
 	

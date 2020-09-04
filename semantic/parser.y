@@ -12,9 +12,10 @@
 // ST_SIZE must be a prime number
 #define 	ST_SIZE 	257
 %}
-
+%locations
 %code requires 
 { 
+	extern int yylineno;
 	#include "ast.hpp" 	
 	#include <string>
 }

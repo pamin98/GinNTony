@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
+#include <unordered_map>
 
 #include "general.hpp"
 #include "error.hpp"
@@ -139,6 +140,8 @@ void closeScope()
 {
     SymbolEntry *e = currentScope->entries;
     Scope *t = currentScope;
+
+    checkDeclares(e);
 
     while (e != NULL)
     {
@@ -583,6 +586,7 @@ unsigned int sizeOfType(Type type)
     return 0;
 }
 
+
 bool equalType(Type type1, Type type2)
 {
     if (type1->dtype != type2->dtype)
@@ -666,4 +670,19 @@ const char *TypeToStr(Type type)
         return "nil";
     }
     return "undefined";
+}
+
+void checkDeclares(SymbolEntry *e)
+{
+    SymbolEntry *entries;
+
+    entries = e;
+
+    while(entries != NULL)
+    {
+        if(entries->entryType==ENTRY_FUNCTION && entries->eFunction.isForward)
+            error("Function %s declared but not defined.",entries->id);
+        entries = entries->nextInScope;
+    }
+
 }

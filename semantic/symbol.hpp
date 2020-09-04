@@ -161,5 +161,6 @@ bool            equalType           (Type type1, Type type2);
 void            printType           (Type type);
 void            printMode           (PassMode mode);
 const char *    TypeToStr           (Type type);
+void            checkDeclares       (SymbolEntry *e);
 
 #endif

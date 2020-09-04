@@ -24,6 +24,7 @@
 
 #include "general.hpp"
 #include "error.hpp"
+#include "parser.hpp"
 
 
 void internal (const char * fmt, ...)
@@ -66,7 +67,7 @@ void error (const char * fmt, ...)
    if (fmt[0] == '\r')
       fmt++;
    else
-      fprintf(stderr, "%s:%d: ", filename, lineno);
+      fprintf(stderr, "%s:%d: ", filename, yylineno);
    fprintf(stderr, "Error, ");
    vfprintf(stderr, fmt, ap);
    fprintf(stderr, "\n");
