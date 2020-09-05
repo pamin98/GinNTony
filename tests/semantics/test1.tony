@@ -1,10 +1,11 @@
 def dummy():
 	decl dummy2()
-	def helper_fun(int x,y; char z):
+	def int helper_fun(int x,y; char z):
 		dummy2()
 		skip
 	end
-	int x,y,q,z
+	int x,y,q
+	char z
 	def dummy2():
 		skip
 	end
@@ -17,15 +18,19 @@ def dummy():
 	l := 2 # 3 # (4 # nil)
 	b := nil?(tail(l))
 	c := nil?(nil)
-	d := nil?(z)
+
+	for x := helper_fun(y,q,z), dummy2(), skip; head(tail(l)); array[q]:=array[x]+1:
+		z := 'a'
+	end
+%	d := nil?(z)
 %	x := new int[16]
 %	y := new int[16]
 %	helper_fun(x,y)
-	if x <> y:
+<*	if x <> y:
 		z := 2
 	elsif  x<>z:
 		z := head(l)
-	end
+	end*>
 end
 
 	

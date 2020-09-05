@@ -7,41 +7,15 @@
 #include <algorithm>
 #include "symbol.hpp"
 #include "error.hpp"
-#include <string.h>
 
-enum relOp
-{
-	eq,
-	lt,
-	gt,
-	le,
-	ge,
-	neq
-};
 
-enum logOp
-{
-	AND,
-	OR,
-	NOT,
-	TRUE,
-	FALSE
-};
+enum relOp { eq, lt, gt, le, ge, neq };
 
-enum listOp
-{
-	nil,
-	nilq,
-	head,
-	tail,
-	append
-};
+enum logOp { AND, OR, NOT, TRUE, FALSE };
 
-enum HeaderType
-{
-	Func_Decl,
-	Func_Def
-};
+enum listOp { nil, nilq, head, tail, append };
+
+enum HeaderType { Func_Decl, Func_Def };
 
 class AST
 {
@@ -340,13 +314,6 @@ public:
 
 	virtual void sem() override
 	{
-		if (strcmp(functionName, "geti") == 0)
-			type = typeInteger;
-		if (strcmp(functionName, "getc") == 0)
-			type = typeChar;
-		if (strcmp(functionName, "puts") == 0 || strcmp(functionName, "putc") == 0 || strcmp(functionName, "geti") == 0 || strcmp(functionName, "puti") == 0 || strcmp(functionName, "getc") == 0)
-			return;
-
 		int functionArguments = 0;
 		bool argMismatch = false;
 		SymbolEntry *f = lookupEntry(functionName, LOOKUP_ALL_SCOPES, true);
@@ -645,8 +612,6 @@ public:
 	{
 		left->checkLVal();
 		Type ltype = left->getType();
-		printf("Type of lvalue: %s.\n", TypeToStr(ltype));
-		printf("Checking type of rvalue.\n");
 		right->type_check(ltype);
 	}
 
