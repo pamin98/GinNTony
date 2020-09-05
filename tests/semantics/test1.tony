@@ -1,5 +1,13 @@
 def dummy():
-	decl dummy2()
+	int num
+	def int funky_func () :
+		num := 2
+		return 42
+	end
+
+	num := funky_func()
+
+<*	decl dummy2()
 	def int helper_fun(int x,y; char z):
 		dummy2()
 		skip
@@ -30,7 +38,7 @@ def dummy():
 		z := 2
 	elsif  x<>z:
 		z := head(l)
-	end*>
+	end*>*>
 end
 
 	
