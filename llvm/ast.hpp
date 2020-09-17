@@ -83,6 +83,12 @@ public:
 			s->sem();
 	}
 
+	virtual Value * compile () override {
+		for (Stmt *s : stmt_list)
+			Value * v = s->compile();
+		return NULL;
+	}
+
 private:
 	std::vector<Stmt *> stmt_list;
 };
