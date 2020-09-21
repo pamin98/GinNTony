@@ -1,5 +1,17 @@
 #pragma once
 
+#include "llvm-9/llvm/ADT/APFloat.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Verifier.h"
+
 #include <iostream>
 #include <map>
 #include <vector>
@@ -28,6 +40,7 @@ protected:
 	static LLVMContext TheContext;
 	static IRBuilder<> Builder;
 	static std::unique_ptr<Module> TheModule;
+	static std::map<std::string,AllocaInst*> NamedValues;
 
 	static Type *i8;
 	static Type *i32;
@@ -443,12 +456,14 @@ public:
 		type = typeInteger;
 	}
 
-	virtual Value * codegen() override {
+	virtual Value * compiler() override 
+	{
 		Value *l;
-		Value *r = right->codegen();
+		Value *r = right->compile();
 		if( left != NULL )
 			l = left->codegen();
-		switch(op){
+		switch(op)
+		{
 			case '+': 
 				if(left == NULL)
 					return r;
@@ -498,17 +513,22 @@ public:
 	}
 
 	/* Add sign extensions ?? */
-	virtual Value * codegen() override {
-		Value * l = left->codegen();
-		Value * r = right->codegen();
-		if(leftType->dtype == TYPE_BOOLEAN)
-			switch(op){
-				case gt:  return Builder.CreateICmpUGT(l, r, "gtcheck");
-				case lt:  return Builder.CreateICmpULT(l, r, "ltcheck");
-				case ge:  return Builder.CreateICmpUGE(l, r, "gecheck");
-				case le:  return Builder.CreateICmpULE(l, r, "lecheck");
-			}
-		switch(op){
+	virtual Value * compile() override 
+	{
+		Value * l = left->compile();
+		Value * r = right->compile();
+		// if(leftType->dtype == TYPE_BOOLEAN)
+		// {
+		// 	switch(op)
+		// 	{
+		// 		case gt:  return Builder.CreateICmpUGT(l, r, "gtcheck");
+		// 		case lt:  return Builder.CreateICmpULT(l, r, "ltcheck");
+		// 		case ge:  return Builder.CreateICmpUGE(l, r, "gecheck");
+		// 		case le:  return Builder.CreateICmpULE(l, r, "lecheck");
+		// 	}
+		// }
+		switch(op)
+		{
 			case eq:  return Builder.CreateICmpEQ(l, r, "eqcheck");
 			case neq: return Builder.CreateICmpNE(l, r, "neqcheck");
 			case gt:  return Builder.CreateICmpSGT(l, r, "gtcheck");
@@ -552,13 +572,13 @@ public:
 		type = typeBoolean;
 	}
 
-	virtual Value * codegen() override {
+	virtual Value * compile() override {
 		Value * l;
 		Value * r;
 		if(left != NULL)
-			l = left->codegen();
+			l = left->compile();
 		if(right != NULL)
-			r = right->codegen();
+			r = right->compile();
 		switch(op) {
 			case TRUE: 
 				return ConstantInt::getTrue(TheContext);
@@ -764,6 +784,59 @@ public:
 		stmt_list->sem();
 		if (nextIf != NULL)
 			nextIf->sem();
+	}
+
+	virtual Value* compile()
+	{
+		Value *CondV = cond->codegen();
+		if (!CondV)
+			return nullptr;
+
+		// Convert condition to a bool by comparing non-equal to 0.0.
+		CondV = Builder.CreateFCmpONE(CondV, ConstantFP::get(TheContext, APFloat(0.0)), "ifcond");
+
+		Function *TheFunction = Builder.GetInsertBlock()->getParent();
+
+		// Create blocks for the then and else cases.  Insert the 'then' block at the
+		// end of the function.
+		BasicBlock *ThenBB =BasicBlock::Create(TheContext, "then", TheFunction);
+		BasicBlock *ElseBB = BasicBlock::Create(TheContext, "else");
+		BasicBlock *MergeBB = BasicBlock::Create(TheContext, "ifcont");
+
+		Builder.CreateCondBr(CondV, ThenBB, ElseBB);
+
+		// Emit then value.
+		Builder.SetInsertPoint(ThenBB);
+
+		Value *ThenV = Then->codegen();
+		if (!ThenV)
+			return nullptr;
+
+		Builder.CreateBr(MergeBB);
+		// Codegen of 'Then' can change the current block, update ThenBB for the PHI.
+		ThenBB = Builder.GetInsertBlock();
+
+		// Emit else block.
+		TheFunction->getBasicBlockList().push_back(ElseBB);
+		Builder.SetInsertPoint(ElseBB);
+
+		Value *ElseV = Else->codegen();
+		if (!ElseV)
+			return nullptr;
+
+		Builder.CreateBr(MergeBB);
+		// codegen of 'Else' can change the current block, update ElseBB for the PHI.
+		ElseBB = Builder.GetInsertBlock();
+
+		// Emit merge block.
+		TheFunction->getBasicBlockList().push_back(MergeBB);
+		Builder.SetInsertPoint(MergeBB);
+		PHINode *PN =Builder.CreatePHI(Type::getDoubleTy(TheContext), 2, "iftmp");
+
+		PN->addIncoming(ThenV, ThenBB);
+		PN->addIncoming(ElseV, ElseBB);
+		return PN;
+
 	}
 
 private:
