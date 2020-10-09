@@ -22,25 +22,60 @@
 
 using namespace llvm;
 
-enum relOp { eq, lt, gt, le, ge, neq };
+enum relOp
+{
+	eq,
+	lt,
+	gt,
+	le,
+	ge,
+	neq
+};
 
-enum logOp { AND, OR, NOT, TRUE, FALSE };
+enum logOp
+{
+	AND,
+	OR,
+	NOT,
+	TRUE,
+	FALSE
+};
 
-enum listOp { nil, nilq, head, tail, append };
+enum listOp
+{
+	nil,
+	nilq,
+	head,
+	tail,
+	append
+};
 
-enum HeaderType { Func_Decl, Func_Def };
+enum HeaderType
+{
+	Func_Decl,
+	Func_Def
+};
 
-class AST {
+/// CreateEntryBlockAlloca - Create an alloca instruction in the entry block of
+/// the function.  This is used for mutable variables etc.
+static AllocaInst *CreateEntryBlockAlloca(Function *TheFunction,const std::string &VarName) 
+{
+	IRBuilder<> TmpB(&TheFunction->getEntryBlock(),TheFunction->getEntryBlock().begin());
+	return TmpB.CreateAlloca(Type::getDoubleTy(getGlobalContext()), 0, VarName.c_str());
+}
+
+class AST
+{
 public:
 	virtual ~AST() {}
 	virtual void sem() {}
-	virtual Value * codegen () = 0;
+	virtual Value *codegen() = 0;
 
 protected:
 	static LLVMContext TheContext;
 	static IRBuilder<> Builder;
 	static std::unique_ptr<Module> TheModule;
-	static std::map<std::string,AllocaInst*> NamedValues;
+	static std::map<std::string, AllocaInst *> NamedValues;
 
 	static Type *i8;
 	static Type *i32;
@@ -52,7 +87,7 @@ class Expr : public AST
 public:
 	void type_check(Type t)
 	{
-		if(type == NULL)
+		if (type == NULL)
 			sem();
 		if (!equalType(t, type))
 			error("Invalid type of operand. Expected %s, found %s.", TypeToStr(t), TypeToStr(type));
@@ -60,7 +95,7 @@ public:
 
 	Type getType()
 	{
-		if(type == NULL)
+		if (type == NULL)
 			sem();
 		return type;
 	}
@@ -96,9 +131,10 @@ public:
 			s->sem();
 	}
 
-	virtual Value * compile () override {
+	virtual Value *codegen() override
+	{
 		for (Stmt *s : stmt_list)
-			Value * v = s->compile();
+			Value *v = s->codegen();
 		return NULL;
 	}
 
@@ -114,9 +150,24 @@ public:
 	virtual void sem() override
 	{
 		SymbolEntry *e = lookupEntry(var, LOOKUP_ALL_SCOPES, true);
-		if(e->entryType == ENTRY_FUNCTION)
-			error("%s is a function, expected parenthesis",e->id);
+		if (e->entryType == ENTRY_FUNCTION)
+			error("%s is a function, expected parenthesis", e->id);
 		type = e->eVariable.type;
+	}
+
+	const char * getName()
+	{
+		return var;
+	}
+
+	virtual Value *codegen() override
+	{
+		// Look this variable up in the function.
+		Value *V = NamedValues[var];
+		if (V == 0) return ErrorV("Unknown variable name");
+
+		// Load the value.
+		return Builder.CreateLoad(V, var);
 	}
 
 private:
@@ -134,6 +185,7 @@ public:
 	}
 
 	void append(const char *v) { var_list.push_back(v); }
+
 
 private:
 	std::vector<const char *> var_list;
@@ -264,8 +316,6 @@ public:
 		closeScope();
 	}
 
-
-
 private:
 	Header *header;
 	DefinitionList *def_list;
@@ -305,6 +355,18 @@ public:
 	{
 		for (const char *variable : var_list->getList())
 			newVariable(variable, type);
+	}
+
+	virtual Value *codegen() override
+	{
+		Function *TheFunction = Builder.GetInsertBlock()->getParent();
+		for (const char *v : var_list->getList())
+		{
+			//TODO Nested Functions, Var Type
+			AllocaInst *Alloca = CreateEntryBlockAlloca(TheFunction, v);
+			NamedValues[v] = Alloca;
+		}
+		return NULL;
 	}
 
 private:
@@ -449,35 +511,36 @@ public:
 		delete right;
 	}
 
-	virtual void sem() override	{
+	virtual void sem() override
+	{
 		right->type_check(typeInteger);
 		if (left != NULL)
 			left->type_check(typeInteger);
 		type = typeInteger;
 	}
 
-	virtual Value * compiler() override 
+	virtual Value *codegen() override
 	{
 		Value *l;
-		Value *r = right->compile();
-		if( left != NULL )
+		Value *r = right->codegen();
+		if (left != NULL)
 			l = left->codegen();
-		switch(op)
+		switch (op)
 		{
-			case '+': 
-				if(left == NULL)
-					return r;
-				return Builder.CreateAdd(l, r, "addtmp");
-			case '-':
-				if (left == NULL)
-					return Builder.CreateNeg(r, "negtmp");
-				return Builder.CreateSub(l, r, "subtmp");
-			case '*':
-				return Builder.CreateMul(l, r, "multmp");
-			case '/':
-				return Builder.CreateSDiv(l, r, "divtmp");
-			case '%':
-				return Builder.CreateSRem(l, r, "modtmp");
+		case '+':
+			if (left == NULL)
+				return r;
+			return Builder.CreateAdd(l, r, "addtmp");
+		case '-':
+			if (left == NULL)
+				return Builder.CreateNeg(r, "negtmp");
+			return Builder.CreateSub(l, r, "subtmp");
+		case '*':
+			return Builder.CreateMul(l, r, "multmp");
+		case '/':
+			return Builder.CreateSDiv(l, r, "divtmp");
+		case '%':
+			return Builder.CreateSRem(l, r, "modtmp");
 		}
 		return NULL;
 	}
@@ -498,7 +561,8 @@ public:
 		delete right;
 	}
 
-	virtual void sem() override	{
+	virtual void sem() override
+	{
 		Type leftType = left->getType();
 		Type rightType = right->getType();
 		if (!equalType(leftType, rightType))
@@ -512,11 +576,12 @@ public:
 			error("Comparisons supported only for integers, booleans and characters.");
 	}
 
+	// TODO
 	/* Add sign extensions ?? */
-	virtual Value * compile() override 
+	virtual Value *codegen() override
 	{
-		Value * l = left->compile();
-		Value * r = right->compile();
+		Value *l = left->codegen();
+		Value *r = right->codegen();
 		// if(leftType->dtype == TYPE_BOOLEAN)
 		// {
 		// 	switch(op)
@@ -527,14 +592,20 @@ public:
 		// 		case le:  return Builder.CreateICmpULE(l, r, "lecheck");
 		// 	}
 		// }
-		switch(op)
+		switch (op)
 		{
-			case eq:  return Builder.CreateICmpEQ(l, r, "eqcheck");
-			case neq: return Builder.CreateICmpNE(l, r, "neqcheck");
-			case gt:  return Builder.CreateICmpSGT(l, r, "gtcheck");
-			case lt:  return Builder.CreateICmpSLT(l, r, "ltcheck");
-			case ge:  return Builder.CreateICmpSGE(l, r, "gecheck");
-			case le:  return Builder.CreateICmpSLE(l, r, "lecheck");
+			case eq:
+				return Builder.CreateICmpEQ(l, r, "eqcheck");
+			case neq:
+				return Builder.CreateICmpNE(l, r, "neqcheck");
+			case gt:
+				return Builder.CreateICmpSGT(l, r, "gtcheck");
+			case lt:
+				return Builder.CreateICmpSLT(l, r, "ltcheck");
+			case ge:
+				return Builder.CreateICmpSGE(l, r, "gecheck");
+			case le:
+				return Builder.CreateICmpSLE(l, r, "lecheck");
 		}
 		return NULL;
 	}
@@ -555,7 +626,8 @@ public:
 		delete right;
 	}
 
-	virtual void sem() override	{
+	virtual void sem() override
+	{
 		switch (op)
 		{
 		case TRUE:
@@ -572,24 +644,26 @@ public:
 		type = typeBoolean;
 	}
 
-	virtual Value * compile() override {
-		Value * l;
-		Value * r;
-		if(left != NULL)
+	virtual Value *compile() override
+	{
+		Value *l;
+		Value *r;
+		if (left != NULL)
 			l = left->compile();
-		if(right != NULL)
+		if (right != NULL)
 			r = right->compile();
-		switch(op) {
-			case TRUE: 
-				return ConstantInt::getTrue(TheContext);
-			case FALSE:
-				return ConstantInt::getFalse(TheContext);
-			case NOT:
-				return Builder.CreateNot(r,"nottmp");
-			case AND:
-				return Builder.CreateAnd(l, r, "andtmp");
-			case OR:
-				return Builder.CreateOr(l, r, "ortmp");
+		switch (op)
+		{
+		case TRUE:
+			return ConstantInt::getTrue(TheContext);
+		case FALSE:
+			return ConstantInt::getFalse(TheContext);
+		case NOT:
+			return Builder.CreateNot(r, "nottmp");
+		case AND:
+			return Builder.CreateAnd(l, r, "andtmp");
+		case OR:
+			return Builder.CreateOr(l, r, "ortmp");
 		}
 		return NULL;
 	}
@@ -633,11 +707,13 @@ public:
 			type = typeBoolean;
 			break;
 		case append:
-			if (right->getType()->dtype == TYPE_NIL){
+			if (right->getType()->dtype == TYPE_NIL)
+			{
 				type = typeList(left->getType());
 				break;
 			}
-			else if (!equalType(left->getType(), right->getType()->refType)){
+			else if (!equalType(left->getType(), right->getType()->refType))
+			{
 				error("Cannot append %s to %s.", TypeToStr(left->getType()), TypeToStr(right->getType()));
 			}
 			type = right->getType();
@@ -718,6 +794,20 @@ public:
 		right->type_check(ltype);
 	}
 
+	virtual Value *codegen() override
+	{
+		Value *Val = right->codegen();
+		if (Val == 0) return 0;
+
+		// Look up the name.
+		// TODO Na doume ti paizei ma array indexes
+		Value *Variable = NamedValues[left->getName()];
+		if (Variable == 0) return ErrorV("Unknown variable name");
+
+		Builder.CreateStore(Val, Variable);
+		return Val;
+	}
+
 private:
 	Expr *left;
 	Expr *right;
@@ -786,7 +876,7 @@ public:
 			nextIf->sem();
 	}
 
-	virtual Value* compile()
+	virtual Value *codegen() override
 	{
 		Value *CondV = cond->codegen();
 		if (!CondV)
@@ -799,7 +889,7 @@ public:
 
 		// Create blocks for the then and else cases.  Insert the 'then' block at the
 		// end of the function.
-		BasicBlock *ThenBB =BasicBlock::Create(TheContext, "then", TheFunction);
+		BasicBlock *ThenBB = BasicBlock::Create(TheContext, "then", TheFunction);
 		BasicBlock *ElseBB = BasicBlock::Create(TheContext, "else");
 		BasicBlock *MergeBB = BasicBlock::Create(TheContext, "ifcont");
 
@@ -831,12 +921,11 @@ public:
 		// Emit merge block.
 		TheFunction->getBasicBlockList().push_back(MergeBB);
 		Builder.SetInsertPoint(MergeBB);
-		PHINode *PN =Builder.CreatePHI(Type::getDoubleTy(TheContext), 2, "iftmp");
+		PHINode *PN = Builder.CreatePHI(Type::getDoubleTy(TheContext), 2, "iftmp");
 
 		PN->addIncoming(ThenV, ThenBB);
 		PN->addIncoming(ElseV, ElseBB);
 		return PN;
-
 	}
 
 private:
