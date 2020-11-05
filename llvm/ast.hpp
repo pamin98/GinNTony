@@ -19,6 +19,10 @@
 #include <algorithm>
 #include "symbol.hpp"
 #include "error.hpp"
+#include "codegen.hpp"
+
+#include <memory>
+#include <deque>
 
 using namespace llvm;
 
@@ -56,12 +60,33 @@ enum HeaderType
 	Func_Def
 };
 
-/// CreateEntryBlockAlloca - Create an alloca instruction in the entry block of
-/// the function.  This is used for mutable variables etc.
-static AllocaInst *CreateEntryBlockAlloca(Function *TheFunction,const std::string &VarName) 
+static std::deque<std::shared_ptr<ActivationRecord>> activationRecordStack;
+static LLVMScope scopes;
+
+// TODO REFERENCES
+llvm::Type *translateType(Type type)
 {
-	IRBuilder<> TmpB(&TheFunction->getEntryBlock(),TheFunction->getEntryBlock().begin());
-	return TmpB.CreateAlloca(Type::getDoubleTy(getGlobalContext()), 0, VarName.c_str());
+	llvm::Type *ret;
+	switch (type->dtype)
+	{
+	case TYPE_INTEGER:
+		ret = i32;
+		break;
+	case TYPE_VOID:
+		ret = proc;
+		break;
+	// TODO WORK ON THE REF SHIT HERE
+	case TYPE_LIST, :
+		ret = llvm::ArrayType::get(translateType(type->getRef()), type->size);
+		break;
+	case TYPE_IARRAY:
+		ret = translateType(type->getRef());
+		break;
+	}
+	// TODO HERE TOO WORK ON REF
+	if (mode == sem::PassMode::REFERENCE)
+		ret = ret->getPointerTo();
+	return ret;
 }
 
 class AST
@@ -135,7 +160,7 @@ public:
 	{
 		for (Stmt *s : stmt_list)
 			Value *v = s->codegen();
-		return NULL;
+		return nullptr;
 	}
 
 private:
@@ -155,19 +180,22 @@ public:
 		type = e->eVariable.type;
 	}
 
-	const char * getName()
+	const char *getName()
 	{
 		return var;
 	}
 
 	virtual Value *codegen() override
 	{
-		// Look this variable up in the function.
-		Value *V = NamedValues[var];
-		if (V == 0) return ErrorV("Unknown variable name");
+		if (activationRecordStack.front()->isRef(var))
+		{
+			auto *addr = Builder.CreateLoad(activationRecordStack.front()->getAddr(var));
+			return Builder.CreateLoad(addr);
+		}
+		else
+			return Builder.CreateLoad(activationRecordStack.front()->getVal(var));
 
-		// Load the value.
-		return Builder.CreateLoad(V, var);
+		return nullptr;
 	}
 
 private:
@@ -185,7 +213,6 @@ public:
 	}
 
 	void append(const char *v) { var_list.push_back(v); }
-
 
 private:
 	std::vector<const char *> var_list;
@@ -210,6 +237,15 @@ public:
 	{
 		for (const char *v : var_list->getList())
 			newParameter(v, type, mode, f);
+	}
+
+	virtual Value *codegen() override
+	{
+		for (auto v : var_list->getList())
+		{
+			activationRecordStack.front()->addArg(v, type, mode);
+			activationRecordStack.front()->addVar(v, type, mode);
+		}
 	}
 
 private:
@@ -247,6 +283,11 @@ public:
 		delete type;
 	}
 
+	virtual FormalList *getFormalList()
+	{
+		return this->formal_list;
+	}
+
 	virtual void sem() override
 	{
 		/* newFunction performs check for duplicate declaration in the same scope */
@@ -256,6 +297,16 @@ public:
 		openScope();
 		formal_list->passParameters(f);
 		endFunctionHeader(f, type);
+	}
+
+	virtual Type getType()
+	{
+		return this->type;
+	}
+
+	virtual char *getName()
+	{
+		return this->functionName
 	}
 
 private:
@@ -281,6 +332,12 @@ public:
 	{
 		for (Definition *d : definition_list)
 			d->sem();
+	}
+
+	virtual Value *codegen() override
+	{
+		for (Definition *d : definition_list)
+			d->codegen();
 	}
 
 private:
@@ -314,6 +371,80 @@ public:
 		def_list->sem();
 		stmt_list->sem();
 		closeScope();
+	}
+
+	virtual Value *codegen() override
+	{
+		// TODO Work on codegen so it fits our code
+		// TODO opou exoume header->getName() kai genikws ->getName() thelei id kanonika ara
+		// mipws na to pername apo hash function
+		auto newBlock = new ActivationRecord();
+		activationRecordStack.push_front(newBlock);
+		this->header->getFormalList()->codegen());
+
+		llvm::FunctionType *ftype = llvm::FunctionType::get(translateType(this->header->getType()), activationRecordStack.front()->getArgs(), false);
+		llvm::Function *func = llvm::Function::Create(ftype, llvm::Function::ExternalLinkage, header->getName(), TheModule.get());
+		activationRecordStack.front()->setFunc(func);
+		scopes.addFunc(this->id, func);
+
+		scopes.openScope();
+
+		// edw prepei na dw ti ginetia me hidden klp emeis den ta exoume auta
+		// TODO na dw apo edw kai katw ti paizei gia na tairiazei me to diko mas kwdika
+		int index = 0;
+		for (auto &Arg : func->args())
+		{
+			if (index == this->params.size())
+			{
+				auto h =
+					std::dynamic_pointer_cast<ast::Param>(this->hidden[hindex++]);
+				Arg.setName(h->id);
+			}
+			else
+			{
+				auto p =
+					std::dynamic_pointer_cast<ast::Param>(this->params[index++]);
+				Arg.setName(p->id);
+			}
+		}
+
+		llvm::BasicBlock *FuncBB = llvm::BasicBlock::Create(TheContext, "entry", func);
+		Builder.SetInsertPoint(FuncBB);
+		activationRecordStack.front()->setCurrentBlock(FuncBB);
+		for (auto &Arg : func->args())
+		{
+			auto *alloca =
+				Builder.CreateAlloca(Arg.getType(), nullptr, Arg.getName());
+			if (Arg.getType()->isPointerTy())
+				activationRecordStack.front()->addAddr(Arg.getName(), alloca);
+			else
+				activationRecordStack.front()->addVal(Arg.getName(), alloca);
+			Builder.CreateStore(&Arg, alloca);
+		}
+		for (auto &decl : this->decls)
+			decl->codegen();
+		this->body->codegen();
+
+		if (func->getReturnType()->isVoidTy())
+			Builder.CreateRetVoid();
+		else
+		{
+			if (!activationRecordStack.front()->hasReturn())
+			{
+				if (func->getReturnType()->isIntegerTy(32))
+					Builder.CreateRet(c32(0));
+				else
+					Builder.CreateRet(c8(0));
+			}
+		}
+
+		activationRecordStack.pop_front();
+		scopes.closeScope();
+
+		if (!main)
+			Builder.SetInsertPoint(activationRecordStack.front()->getCurrentBlock());
+
+		return nullptr;
 	}
 
 private:
@@ -359,14 +490,14 @@ public:
 
 	virtual Value *codegen() override
 	{
-		Function *TheFunction = Builder.GetInsertBlock()->getParent();
-		for (const char *v : var_list->getList())
+		for (const char *varName : var_list->getList())
 		{
-			//TODO Nested Functions, Var Type
-			AllocaInst *Alloca = CreateEntryBlockAlloca(TheFunction, v);
-			NamedValues[v] = Alloca;
+			auto *type = translateType(type);
+			auto *alloca = Builder.CreateAlloca(type, nullptr, varName);
+			activationRecordStack.front()->addVar(varName, type);
+			activationRecordStack.front()->addVal(varName, alloca);
 		}
-		return NULL;
+		return nullptr;
 	}
 
 private:
@@ -444,6 +575,10 @@ public:
 		}
 	}
 
+	virtual Value *codegen() override
+	{
+	}
+
 	virtual void checkLVal() override
 	{
 		error("Lvalue cannot be a function call.");
@@ -469,6 +604,11 @@ public:
 		error("Lvalue cannot be a string literal.");
 	}
 
+	virtual Value *codegen() override
+	{
+		return Builder.CreateGlobalStringPtr(this->str);
+	}
+
 private:
 	const char *str;
 };
@@ -483,6 +623,11 @@ public:
 		type = typeInteger;
 	}
 
+	virtual Value *codegen() override
+	{
+		return llvm : ConstantInt::get(i32, num);
+	}
+
 private:
 	int num;
 };
@@ -495,6 +640,11 @@ public:
 	virtual void sem() override
 	{
 		type = typeChar;
+	}
+
+	virtual Value *codegen() override
+	{
+		return llvm : ConstantInt::get(i8, c);
 	}
 
 private:
@@ -594,18 +744,18 @@ public:
 		// }
 		switch (op)
 		{
-			case eq:
-				return Builder.CreateICmpEQ(l, r, "eqcheck");
-			case neq:
-				return Builder.CreateICmpNE(l, r, "neqcheck");
-			case gt:
-				return Builder.CreateICmpSGT(l, r, "gtcheck");
-			case lt:
-				return Builder.CreateICmpSLT(l, r, "ltcheck");
-			case ge:
-				return Builder.CreateICmpSGE(l, r, "gecheck");
-			case le:
-				return Builder.CreateICmpSLE(l, r, "lecheck");
+		case eq:
+			return Builder.CreateICmpEQ(l, r, "eqcheck");
+		case neq:
+			return Builder.CreateICmpNE(l, r, "neqcheck");
+		case gt:
+			return Builder.CreateICmpSGT(l, r, "gtcheck");
+		case lt:
+			return Builder.CreateICmpSLT(l, r, "ltcheck");
+		case ge:
+			return Builder.CreateICmpSGE(l, r, "gecheck");
+		case le:
+			return Builder.CreateICmpSLE(l, r, "lecheck");
 		}
 		return NULL;
 	}
@@ -644,7 +794,7 @@ public:
 		type = typeBoolean;
 	}
 
-	virtual Value *compile() override
+	virtual Value *codegen() override
 	{
 		Value *l;
 		Value *r;
@@ -796,16 +946,38 @@ public:
 
 	virtual Value *codegen() override
 	{
-		Value *Val = right->codegen();
-		if (Val == 0) return 0;
+		auto *rval = right->codegen();
 
-		// Look up the name.
-		// TODO Na doume ti paizei ma array indexes
-		Value *Variable = NamedValues[left->getName()];
-		if (Variable == 0) return ErrorV("Unknown variable name");
-
-		Builder.CreateStore(Val, Variable);
-		return Val;
+		/* Normal Variable */
+		if (std::dynamic_pointer_cast<ArrayIndexing>(left) == nullptr)
+		{
+			if (activationRecordStack.front()->isRef(lval->getName()))
+			{
+				auto *addr = Builder.CreateLoad(activationRecordStack.front()->getAddr(lval->getName()));
+				return Builder.CreateStore(rval, addr);
+			}
+			else
+			{
+				return Builder.CreateStore(rval, activationRecordStack.front()->getVal(lval->getName()));
+			}
+		}
+		/* Array */
+		else
+		{
+			auto *idx = lval->index->codegen();
+			llvm::Value *val;
+			if (activationRecordStack.front()->isRef(lval->getName()))
+			{
+				val = Builder.CreateLoad(activationRecordStack.front()->getAddr(lval->getName()));
+				val = Builder.CreateGEP(val, idx);
+			}
+			else
+			{
+				val = Builder.CreateGEP(activationRecordStack.front()->getVal(lval->getName()), std::vector<llvm::Value *>{c32(0), idx});
+			}
+			return Builder.CreateStore(rval, val);
+		}
+		return nullptr;
 	}
 
 private:
@@ -876,6 +1048,7 @@ public:
 			nextIf->sem();
 	}
 
+	// TODO maybe needs some work, check alan implementation
 	virtual Value *codegen() override
 	{
 		Value *CondV = cond->codegen();
@@ -952,6 +1125,11 @@ public:
 		threshold->type_check(typeBoolean);
 		steps->sem();
 		loop_body->sem();
+	}
+
+	// TODO rewrite alan while into for
+	virtual Value *codegen() override
+	{
 	}
 
 private:

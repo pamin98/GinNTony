@@ -142,15 +142,13 @@ void            closeScope          (void);
 SymbolEntry *   newVariable         (const char *name, Type type);
 SymbolEntry *   newConstant         (const char *name, Type type, ...);
 SymbolEntry *   newFunction         (const char *name);
-SymbolEntry *   newParameter        (const char *name, Type type,
-                                    PassMode mode, SymbolEntry *f);
+SymbolEntry *   newParameter        (const char *name, Type type, PassMode mode, SymbolEntry *f);
 SymbolEntry *   newTemporary        (Type type);
 
 void            declareFunction     (SymbolEntry *f);
 void            endFunctionHeader   (SymbolEntry *f, Type type);
 void            destroyEntry        (SymbolEntry *e);
-SymbolEntry *   lookupEntry         (const char *name, LookupType type,
-                                    bool err);
+SymbolEntry *   lookupEntry         (const char *name, LookupType type, bool err);
 
 Type            typeArray           (RepInteger size, Type refType);
 Type            typeIArray          (Type refType);
