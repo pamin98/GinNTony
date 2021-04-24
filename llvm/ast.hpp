@@ -1051,6 +1051,9 @@ public:
 	// TODO maybe needs some work, check alan implementation
 	virtual Value *codegen() override
 	{
+		if( cond == NULL && stmt_list != NULL )
+			stmt_list->codegen()
+		
 		Value *CondV = cond->codegen();
 		if (!CondV)
 			return nullptr;
@@ -1071,7 +1074,7 @@ public:
 		// Emit then value.
 		Builder.SetInsertPoint(ThenBB);
 
-		Value *ThenV = Then->codegen();
+		Value *ThenV = stmt_list->codegen();
 		if (!ThenV)
 			return nullptr;
 
@@ -1083,7 +1086,7 @@ public:
 		TheFunction->getBasicBlockList().push_back(ElseBB);
 		Builder.SetInsertPoint(ElseBB);
 
-		Value *ElseV = Else->codegen();
+		Value *ElseV = nextIf->codegen();
 		if (!ElseV)
 			return nullptr;
 
