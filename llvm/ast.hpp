@@ -1151,13 +1151,9 @@ public:
 		Builder.SetInsertPoint(LoopBB);
 
 		// Start the PHI node with an entry for Start.
-		PHINode *Variable = Builder.CreatePHI(Type::getDoubleTy(TheContext), 2, VarName.c_str());
+		// TODO change VarName to something else here
+		PHINode *Variable = Builder.CreatePHI(Type::getDoubleTy(TheContext), 2, "fortmp");
 		Variable->addIncoming(StartVal, PreheaderBB);
-
-		// Within the loop, the variable is defined equal to the PHI node.  If it
-		// shadows an existing variable, we have to restore it, so save it now.
-		Value *OldVal = NamedValues[VarName];
-		NamedValues[VarName] = Variable;
 
 		// Emit the body of the loop.  This, like any other expr, can change the
 		// current BB.  Note that we ignore the value computed by the body, but don't
@@ -1197,12 +1193,6 @@ public:
 
 		// Add a new entry to the PHI node for the backedge.
 		Variable->addIncoming(NextVar, LoopEndBB);
-
-		// Restore the unshadowed variable.
-		if (OldVal)
-			NamedValues[VarName] = OldVal;
-		else
-			NamedValues.erase(VarName);
 
 		// for expr always returns 0.0.
 		return Constant::getNullValue(Type::getDoubleTy(TheContext));
