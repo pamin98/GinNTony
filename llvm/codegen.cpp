@@ -127,4 +127,5 @@ llvm::Function* Scope::getFunc(std::string id) {
         if (funcs.find(id) != funcs.end())
             return funcs[id];
     }
+    return NULL;
 }
