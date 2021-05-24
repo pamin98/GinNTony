@@ -875,6 +875,48 @@ public:
 		}
 	}
 
+	virtual Value *codegen() override
+	{
+		// Value *l;
+		// Value *r = right->codegen();
+		// Value *r = right->codegen();
+		Value *l;
+		if (left != NULL)
+			l = left->codegen();
+		// TODO prepei na kanoume if gia ref
+		if (op == head)
+		{
+			r = Builder.CreateLoad(activationRecordStack.front()->getAddr(right->getName()));
+			r = Builder.CreateGEP(r, 0);
+			return Builder.CreateLoad(r);
+		}
+		else if ( op == tail )
+		{
+			r = Builder.CreateLoad(activationRecordStack.front()->getAddr(right->getName()));
+			r = Builder.CreateGEP(r, 1);
+			return Builder.CreateLoad(r);
+		}
+		else if ( op == append )
+		{	
+			auto *r = right->codegen();
+			// auto *type = translateType(type);
+			// create unnamed allocation
+			auto *alloca = Builder.CreateAlloca(r->getType(), nullptr);
+			Builder.CreateStore(&Arg, alloca);
+			r = Builder.CreateLoad();
+			r = Builder.CreateGEP(r, 1);
+			// activationRecordStack.front()->addVar(varName, type);
+			// activationRecordStack.front()->addVal(varName, alloca);
+			// x = list y = value
+			// y # x
+		}
+		else if ( op == nil )
+		{
+			
+		}
+
+	}
+
 private:
 	Expr *left;
 	listOp op;
