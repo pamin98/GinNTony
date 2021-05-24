@@ -1,6 +1,6 @@
 #pragma once
 
-#include "llvm-9/llvm/ADT/APFloat.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
@@ -77,7 +77,12 @@ llvm::Type *translateType(Type type)
 		break;
 	// TODO WORK ON THE REF SHIT HERE
 	case TYPE_LIST:
-		ret = translateType(type->refType);
+		auto listType = translateType(type->refType);
+		// TODO check struct type create identifier name, maybe it needs to be unique
+		auto myStructType = StructType::create(context, "myStruct"); // Create opaque type
+		auto myStructPtrType = PointerType::get(myStructType, 0); // Initialise the pointer type now
+		myStructType->setBody({ listType, myStructPtrType }, /* packed */ false); // Set the body of the aggregate
+		ret = myStructType;
 		break;
 	case TYPE_IARRAY:
 		ret = llvm::ArrayType::get(translateType(type->refType), type->size);
