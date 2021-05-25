@@ -877,44 +877,42 @@ public:
 
 	virtual Value *codegen() override
 	{
-		// Value *l;
-		// Value *r = right->codegen();
-		// Value *r = right->codegen();
+		Value *r = right->codegen();
 		Value *l;
 		if (left != NULL)
 			l = left->codegen();
-		// TODO prepei na kanoume if gia ref
 		if (op == head)
 		{
-			r = Builder.CreateLoad(activationRecordStack.front()->getAddr(right->getName()));
 			r = Builder.CreateGEP(r, 0);
 			return Builder.CreateLoad(r);
 		}
 		else if ( op == tail )
 		{
-			r = Builder.CreateLoad(activationRecordStack.front()->getAddr(right->getName()));
 			r = Builder.CreateGEP(r, 1);
 			return Builder.CreateLoad(r);
 		}
 		else if ( op == append )
 		{	
-			auto *r = right->codegen();
-			// auto *type = translateType(type);
-			// create unnamed allocation
-			auto *alloca = Builder.CreateAlloca(r->getType(), nullptr);
-			Builder.CreateStore(&Arg, alloca);
-			r = Builder.CreateLoad();
-			r = Builder.CreateGEP(r, 1);
-			// activationRecordStack.front()->addVar(varName, type);
-			// activationRecordStack.front()->addVal(varName, alloca);
-			// x = list y = value
-			// y # x
+			auto *new_head_alloca = Builder.CreateAlloca(r->getType(), nullptr);
+			auto *new_head_struct = Builder.CreateLoad(new_head_alloca);
+
+			auto *new_val_address = Builder.CreateGEP(new_head_struct,1);
+			Builder.CreateStore(l, new_val_address);
+
+			auto *new_head_next = Builder.CreateGEP(new_head_struct,0);
+			Builder.CreateStore(r, new_head_next);
 		}
 		else if ( op == nil )
 		{
-			
+			return ConstantPointerNull( translateType(TYPE_LIST) )
 		}
-
+		else if (  op == nilq )
+		{
+			if( ConstantPointerNull::classof(r)) 
+				return ConstantInt::getTrue(TheContext);
+			else 
+				return ConstantInt::getFalse(TheContext);
+		}
 	}
 
 private:
@@ -1074,8 +1072,7 @@ public:
 		Type returnType = currentScope->returnType;
 		Type exprType = returnExpr->getType();
 		if (!equalType(exprType, returnType))
-			error("Invalid type of return expression: Expected %s, found %s.",
-				  TypeToStr(returnType), TypeToStr(exprType));
+			error("Invalid type of return expression: Expected %s, found %s.", TypeToStr(returnType), TypeToStr(exprType));
 	}
 
 private:
