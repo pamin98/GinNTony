@@ -233,6 +233,11 @@ public:
 		delete var_list;
 	}
 
+	std::vector<const char *> get_var_list_names()
+	{
+		return var_list->getList();
+	}
+
 	virtual void passParameters(SymbolEntry *f)
 	{
 		for (const char *v : var_list->getList())
@@ -266,6 +271,28 @@ public:
 	{
 		for (Formal *formal : formal_list)
 			formal->passParameters(f);
+	}
+
+	virtual Value *codegen() override
+	{
+		for (auto f : formal_list)
+			f->codegen();
+	}
+
+	std::vector<Formal *> get_formal_list() 
+	{
+		return formal_list;
+	}
+
+	std::vector<const char *> get_arg_names() 
+	{
+		std::vector<const char *> ret;
+		for(auto f : formal_list)
+		{
+			for(auto name : f->get_var_list_names())
+				ret.push_back(name);
+		}
+		return ret;
 	}
 
 private:
@@ -306,7 +333,7 @@ public:
 
 	virtual char *getName()
 	{
-		return this->functionName
+		return this->functionName;
 	}
 
 private:
@@ -375,55 +402,45 @@ public:
 
 	virtual Value *codegen() override
 	{
-		// TODO Work on codegen so it fits our code
-		// TODO opou exoume header->getName() kai genikws ->getName() thelei id kanonika ara
-		// mipws na to pername apo hash function
 		auto newBlock = new ActivationRecord();
 		activationRecordStack.push_front(newBlock);
-		this->header->getFormalList()->codegen());
+		header->getFormalList()->codegen();
+		if (scope.getFunc(header->getName()) == NULL)
+		{
+			llvm::FunctionType *ftype = llvm::FunctionType::get(
+				translateType(this->header->getType()), activationRecordStack.front()->getArgs(), false);
 
-		llvm::FunctionType *ftype = llvm::FunctionType::get(translateType(this->header->getType()), activationRecordStack.front()->getArgs(), false);
-		llvm::Function *func = llvm::Function::Create(ftype, llvm::Function::ExternalLinkage, header->getName(), TheModule.get());
-		activationRecordStack.front()->setFunc(func);
-		scopes.addFunc(this->id, func);
+			llvm::Function *func = llvm::Function::Create(
+				ftype, llvm::Function::ExternalLinkage, header->getName(), TheModule.get());
+
+			activationRecordStack.front()->setFunc(func);
+			scopes.addFunc(header->getName(), func);
+		}
+		else 
+			activationRecordStack.front()->setFunc(scopes.getFunc(header->getName()));
 
 		scopes.openScope();
 
-		// edw prepei na dw ti ginetia me hidden klp emeis den ta exoume auta
-		// TODO na dw apo edw kai katw ti paizei gia na tairiazei me to diko mas kwdika
 		int index = 0;
+		auto var_list = this->header->getFormalList()->get_arg_names();
 		for (auto &Arg : func->args())
-		{
-			if (index == this->params.size())
-			{
-				auto h =
-					std::dynamic_pointer_cast<ast::Param>(this->hidden[hindex++]);
-				Arg.setName(h->id);
-			}
-			else
-			{
-				auto p =
-					std::dynamic_pointer_cast<ast::Param>(this->params[index++]);
-				Arg.setName(p->id);
-			}
-		}
+			Arg.setName(var_list[index++]);
 
 		llvm::BasicBlock *FuncBB = llvm::BasicBlock::Create(TheContext, "entry", func);
 		Builder.SetInsertPoint(FuncBB);
 		activationRecordStack.front()->setCurrentBlock(FuncBB);
 		for (auto &Arg : func->args())
 		{
-			auto *alloca =
-				Builder.CreateAlloca(Arg.getType(), nullptr, Arg.getName());
+			auto *alloca = Builder.CreateAlloca(Arg.getType(), nullptr, Arg.getName());
 			if (Arg.getType()->isPointerTy())
 				activationRecordStack.front()->addAddr(Arg.getName(), alloca);
 			else
 				activationRecordStack.front()->addVal(Arg.getName(), alloca);
 			Builder.CreateStore(&Arg, alloca);
 		}
-		for (auto &decl : this->decls)
-			decl->codegen();
-		this->body->codegen();
+
+		def_list->codegen();
+		stmt_list->codegen();
 
 		if (func->getReturnType()->isVoidTy())
 			Builder.CreateRetVoid();
@@ -468,7 +485,23 @@ public:
 		closeScope();
 	}
 
-private:
+	virtual void codegen()
+	{
+		auto newBlock = new ActivationRecord();
+		activationRecordStack.push_front(newBlock);
+		header->getFormalList()->codegen();
+
+		llvm::FunctionType *ftype = llvm::FunctionType::get(
+			translateType(header->getType()), activationRecordStack.front()->getArgs(), false);
+
+		llvm::Function *func = llvm::Function::Create(
+			ftype, llvm::Function::ExternalLinkage, header->getName(), TheModule.get());
+
+		scopes.addFunc(header->getName(), func);
+		activationRecordStack.pop_front();
+	}
+
+ private:
 	Header *header;
 };
 

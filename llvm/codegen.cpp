@@ -20,6 +20,11 @@
 /*******************************************************************************
  * ActivationRecord
  *******************************************************************************/
+typedef std::unordered_map<std::string, llvm::AllocaInst*> ValTable;
+typedef std::unordered_map<std::string, llvm::Function*> FuncMap;
+typedef std::vector<llvm::Type*> TypeVec;
+typedef std::unordered_map<std::string, llvm::Type*> TypeTable;
+
 
 ActivationRecord::ActivationRecord() {
     this->func      = nullptr;
@@ -122,4 +127,5 @@ llvm::Function* Scope::getFunc(std::string id) {
         if (funcs.find(id) != funcs.end())
             return funcs[id];
     }
+    return NULL;
 }
