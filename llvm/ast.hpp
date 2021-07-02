@@ -1,6 +1,6 @@
 #pragma once
 
-#include "llvm-9/llvm/ADT/APFloat.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
@@ -77,7 +77,11 @@ llvm::Type *translateType(Type type)
 		break;
 	// TODO WORK ON THE REF SHIT HERE
 	case TYPE_LIST:
-		ret = translateType(type->refType);
+		auto listType = translateType(type->refType);
+		auto myStructType = StructType::create(context, "myStruct"); 
+		auto myStructPtrType = PointerType::get(myStructType, 0); 
+		myStructType->setBody({ listType, myStructPtrType }, /* packed */ false); 
+		ret = myStructType;
 		break;
 	case TYPE_IARRAY:
 		ret = llvm::ArrayType::get(translateType(type->refType), type->size);
@@ -102,9 +106,9 @@ protected:
 	static std::unique_ptr<Module> TheModule;
 	static std::map<std::string, AllocaInst *> NamedValues;
 
-	static Type *i8;
-	static Type *i32;
-	static Type *i64;
+	static llvm::Type *i32 = llvm::Type::getInt32Ty(TheContext);
+	static llvm::Type *i8 = llvm::Type::getInt8Ty(TheContext);
+	static llvm::Type *proc = llvm::Type::getVoidTy(TheContext);
 };
 
 class Expr : public AST
@@ -590,12 +594,12 @@ public:
 				argMismatch = true;
 				break;
 			}
+			// if expression is not variable and mode is reference error
 			e->type_check(paramType);
 			args = args->eParameter.next;
 		}
 		if (argMismatch)
-			error("Expected %d arguments for function %s, but %lu were given.",
-				  functionArguments, functionName, expr_list->getList().size());
+			error("Expected %d arguments for function %s, but %lu were given.", functionArguments, functionName, expr_list->getList().size());
 		else if (args)
 		{
 			while (args)
@@ -603,13 +607,76 @@ public:
 				++functionArguments;
 				args = args->eParameter.next;
 			}
-			error("Expected %d arguments for function %s, but %lu were given.",
-				  functionArguments, functionName, expr_list->getList().size());
+			error("Expected %d arguments for function %s, but %lu were given.", functionArguments, functionName, expr_list->getList().size());
 		}
 	}
 
 	virtual Value *codegen() override
 	{
+		llvm::Function *TheFunction = scopes.getFunc(this->functionName);
+
+		std::vector<llvm::Value *> callArgs;
+
+		auto expr_vec = this->expr_list->getList();
+
+
+		int index = 0;
+		for (auto &Arg : TheFunction->args()) {
+			/* If argument by reference */
+			if (Arg.getType()->isPointerTy()) {
+				auto var = std::dynamic_pointer_cast<Var>(this->params[index]);
+				/* Found variable */
+				if (var) {
+					if (var->index == nullptr) {
+						if (genBlocks.front()->isRef(var->id)) {
+							auto par = Builder.CreateLoad(
+								genBlocks.front()->getAddr(var->id));
+							callArgs.push_back(par);
+						} else {
+							llvm::Value *par;
+							if (genBlocks.front()->getVar(var->id)->isArrayTy())
+								par = Builder.CreateGEP(
+									genBlocks.front()->getVal(var->id),
+									std::vector<llvm::Value *>{c32(0), c32(0)});
+							else
+								par = genBlocks.front()->getVal(var->id);
+							callArgs.push_back(par);
+						}
+					} else {
+						auto idx = var->index->codegen();
+						if (genBlocks.front()->isRef(var->id)) {
+							llvm::Value *par = Builder.CreateLoad(
+								genBlocks.front()->getAddr(var->id));
+							par = Builder.CreateGEP(par, idx);
+							callArgs.push_back(par);
+						} else {
+							llvm::Value *par = genBlocks.front()->getVal(var->id);
+							par = Builder.CreateGEP(
+								par, std::vector<llvm::Value *>{c32(0), idx});
+							callArgs.push_back(par);
+						}
+					}
+					index++;
+					continue;
+				}
+				auto strlit =
+					std::dynamic_pointer_cast<ast::String>(this->params[index]);
+				/* Found string literal */
+				if (strlit) {
+					callArgs.push_back(strlit->codegen());
+					index++;
+					continue;
+				}
+				linecount = this->line;
+				error("Expected variable or string literal");
+			} else {
+				auto par = this->params[index];
+				callArgs.push_back(par->codegen());
+				index++;
+			}
+		}
+		return Builder.CreateCall(TheFunction, callArgs);
+
 	}
 
 	virtual void checkLVal() override
@@ -903,6 +970,46 @@ public:
 		}
 	}
 
+	virtual Value *codegen() override
+	{
+		Value *r = right->codegen();
+		Value *l;
+		if (left != NULL)
+			l = left->codegen();
+		if (op == head)
+		{
+			r = Builder.CreateGEP(r, 0);
+			return Builder.CreateLoad(r);
+		}
+		else if ( op == tail )
+		{
+			r = Builder.CreateGEP(r, 1);
+			return Builder.CreateLoad(r);
+		}
+		else if ( op == append )
+		{	
+			auto *new_head_alloca = Builder.CreateAlloca(r->getType(), nullptr);
+			auto *new_head_struct = Builder.CreateLoad(new_head_alloca);
+
+			auto *new_val_address = Builder.CreateGEP(new_head_struct,1);
+			Builder.CreateStore(l, new_val_address);
+
+			auto *new_head_next = Builder.CreateGEP(new_head_struct,0);
+			Builder.CreateStore(r, new_head_next);
+		}
+		else if ( op == nil )
+		{
+			return ConstantPointerNull( translateType(TYPE_LIST) )
+		}
+		else if (  op == nilq )
+		{
+			if( ConstantPointerNull::classof(r)) 
+				return ConstantInt::getTrue(TheContext);
+			else 
+				return ConstantInt::getFalse(TheContext);
+		}
+	}
+
 private:
 	Expr *left;
 	listOp op;
@@ -1060,8 +1167,7 @@ public:
 		Type returnType = currentScope->returnType;
 		Type exprType = returnExpr->getType();
 		if (!equalType(exprType, returnType))
-			error("Invalid type of return expression: Expected %s, found %s.",
-				  TypeToStr(returnType), TypeToStr(exprType));
+			error("Invalid type of return expression: Expected %s, found %s.", TypeToStr(returnType), TypeToStr(exprType));
 	}
 
 private:

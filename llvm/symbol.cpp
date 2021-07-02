@@ -591,6 +591,8 @@ bool equalType(Type type1, Type type2)
 {
     if (type1->dtype != type2->dtype)
         return false;
+    if (type1->refType != type2->refType)
+        return false;
     switch (type1->dtype)
     {
     case TYPE_IARRAY:

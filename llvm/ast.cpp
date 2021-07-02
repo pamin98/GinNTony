@@ -4,6 +4,6 @@ LLVMContext AST::TheContext;
 IRBuilder<> AST::Builder(TheContext);
 std::unique_ptr<Module> AST::TheModule;
 
-Type *AST::i8;
-Type *AST::i32;
-Type *AST::i64;
+static llvm::Type *i32 = llvm::Type::getInt32Ty(TheContext);
+static llvm::Type *i8 = llvm::Type::getInt8Ty(TheContext);
+static llvm::Type *proc = llvm::Type::getVoidTy(TheContext);
