@@ -1122,9 +1122,48 @@ public:
 		loop_body->sem();
 	}
 
-	// TODO rewrite alan while into for
 	virtual Value *codegen() override
 	{
+		initializers->codegen();
+
+		Function *TheFunction = Builder.GetInsertBlock()->getParent();
+		BasicBlock *LoopBB = BasicBlock::Create(TheContext, "loop", TheFunction);
+		BasicBlock *AfterBB = llvm::BasicBlock::Create(TheContext, "after");
+
+		Value *CondV = threshold->codegen();
+		if (!CondV)
+			return nullptr;
+
+		// Convert condition to a bool by comparing non-equal to 0.0.
+		CondV = Builder.CreateFCmpONE(CondV, ConstantFP::get(TheContext, APFloat(0.0)), "loopcond");
+
+		Builder.CreateCondBr(CondV, LoopBB, AfterBB);
+
+		// Start insertion in LoopBB.
+		Builder.SetInsertPoint(LoopBB);
+		activationRecordStack.front()->setCurrentBlock(LoopBB);
+
+		loop_body->codegen()
+
+		// Emit the step value.
+		steps->codegen();
+
+		Value *CondV = threshold->codegen();
+		if (!CondV)
+			return nullptr;
+
+		// Convert condition to a bool by comparing non-equal to 0.0.
+		CondV = Builder.CreateFCmpONE(CondV, ConstantFP::get(TheContext, APFloat(0.0)), "loopcond");
+
+		// Insert the conditional branch into the end of LoopEndBB.
+		Builder.CreateCondBr(CondV, LoopBB, AfterBB);
+
+		// Any new code will be inserted in AfterBB.
+		TheFunction->getBasicBlockList().push_back(AfterBB);
+		Builder.SetInsertPoint(AfterBB);
+		activationRecordStack.front()->setCurrentBlock(AfterBB);
+
+		return nullptr;
 	}
 
 private:
@@ -1133,3 +1172,26 @@ private:
 	Stmt *steps;
 	StmtList *loop_body;
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
