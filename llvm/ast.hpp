@@ -76,11 +76,11 @@ llvm::Type *translateType(Type type)
 		ret = proc;
 		break;
 	// TODO WORK ON THE REF SHIT HERE
-	case TYPE_LIST, :
-		ret = llvm::ArrayType::get(translateType(type->getRef()), type->size);
+	case TYPE_LIST:
+		ret = translateType(type->refType);
 		break;
 	case TYPE_IARRAY:
-		ret = translateType(type->getRef());
+		ret = llvm::ArrayType::get(translateType(type->refType), type->size);
 		break;
 	}
 	// TODO HERE TOO WORK ON REF
@@ -901,12 +901,13 @@ private:
 	Expr *index;
 };
 
-class ArrayInit : public Expr
+class ArrayInit : public Stmt
 {
 public:
-	ArrayInit(Type t, Expr *e) : refT(t), expr(e){};
+	ArrayInit(const char *v, Type t, Expr *e) : arrayName(v), refT(t), expr(e){};
 	~ArrayInit()
 	{
+		delete arrayName;
 		delete type;
 		delete refT;
 		delete expr;
@@ -916,13 +917,29 @@ public:
 	{
 		if (refT->dtype != TYPE_INTEGER && refT->dtype != TYPE_BOOLEAN && refT->dtype != TYPE_CHAR)
 			error("Arrays of integers, booleans and characters are only supported.");
-
-		type = typeIArray(refT);
+		
+		this->type = typeIArray(refT);
 		if (expr->getType()->dtype != TYPE_INTEGER)
 			error("Array size must be of type integer.");
 	}
 
+	// Sto semantic na koita3oume na tsekaroume oti ikanopoieitai kai to semantic tou assignStmt
+	// oti to aristero kommati exei to idio data type me to de3i kommati
+	// na ftia3oume parser.y sto 212
+	virtual Value *codegen() override
+	{
+		auto size = expr->codegen();
+		this->type->size = size;
+		auto *arrayType = translateType(this->type);
+		auto *alloca = Builder.CreateAlloca(this->type, nullptr, this->arrayName);
+		genBlocks.front()->addVar(this->arrayName, this->type);
+		genBlocks.front()->addVal(this->arrayName, alloca);
+		return nullptr;
+	}
+
 private:
+	Type type;
+	const char *arrayName;
 	Type refT;
 	Expr *expr;
 };
@@ -946,7 +963,7 @@ public:
 
 	virtual Value *codegen() override
 	{
-		auto *rval = right->codegen();
+		Value *rval = right->codegen();
 
 		/* Normal Variable */
 		if (std::dynamic_pointer_cast<ArrayIndexing>(left) == nullptr)
@@ -965,7 +982,7 @@ public:
 		else
 		{
 			auto *idx = lval->index->codegen();
-			llvm::Value *val;
+			Value *val;
 			if (activationRecordStack.front()->isRef(lval->getName()))
 			{
 				val = Builder.CreateLoad(activationRecordStack.front()->getAddr(lval->getName()));
@@ -973,7 +990,7 @@ public:
 			}
 			else
 			{
-				val = Builder.CreateGEP(activationRecordStack.front()->getVal(lval->getName()), std::vector<llvm::Value *>{c32(0), idx});
+				val = Builder.CreateGEP(activationRecordStack.front()->getVal(lval->getName()), std::vector<Value *>{c32(0), idx});
 			}
 			return Builder.CreateStore(rval, val);
 		}

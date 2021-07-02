@@ -209,6 +209,7 @@ else:
 simple:
 		  "skip"						{ $$ = new SkipStmt(); }
 		| atom ":=" expr				{ $$ = new AssignStmt($1,$3); }
+		| atom ":="  "new" type '[' expr ']' { $$ = new ArrayInit($1,$4,$6); }
 		| call							{ $$ = $1; }
 		;
 
@@ -261,7 +262,7 @@ expr:
 		| "not" expr					{ $$ = new LogOp(NOT,NULL,$2); }
 		| expr "and" expr				{ $$ = new LogOp(AND,$1,$3); }
 		| expr "or" expr				{ $$ = new LogOp(OR,$1,$3); }
-		| "new" type '[' expr ']' 		{ $$ = new ArrayInit($2,$4); }
+		//| "new" type '[' expr ']' 		{ $$ = new ArrayInit($2,$4); }
 		| "nil"							{ $$ = new ListOp(nil,NULL,NULL); }
 		| "nil?" '(' expr ')'			{ $$ = new ListOp(nilq,NULL,$3); }
 		| expr '#' expr					{ $$ = new ListOp(append,$1,$3); }
