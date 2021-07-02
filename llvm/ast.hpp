@@ -1048,12 +1048,14 @@ public:
 			nextIf->sem();
 	}
 
-	// TODO maybe needs some work, check alan implementation
+	// TODO while instead of recursive
+	// TODO check if setting basic blocks in AR is redundant 
 	virtual Value *codegen() override
 	{
+		if( cond == NULL && stmt_list != NULL )
+			return stmt_list->codegen();
+
 		Value *CondV = cond->codegen();
-		if (!CondV)
-			return nullptr;
 
 		// Convert condition to a bool by comparing non-equal to 0.0.
 		CondV = Builder.CreateFCmpONE(CondV, ConstantFP::get(TheContext, APFloat(0.0)), "ifcond");
@@ -1070,35 +1072,28 @@ public:
 
 		// Emit then value.
 		Builder.SetInsertPoint(ThenBB);
+		activationRecordStack.front()->setCurrentBlock(ThenBB);
 
-		Value *ThenV = Then->codegen();
-		if (!ThenV)
-			return nullptr;
-
-		Builder.CreateBr(MergeBB);
-		// Codegen of 'Then' can change the current block, update ThenBB for the PHI.
-		ThenBB = Builder.GetInsertBlock();
+		stmt_list->codegen();
+		if (!activationRecordStack.front()->hasReturn())
+        	Builder.CreateBr(MergeBB);
 
 		// Emit else block.
 		TheFunction->getBasicBlockList().push_back(ElseBB);
 		Builder.SetInsertPoint(ElseBB);
+		activationRecordStack.front()->setCurrentBlock(ElseBB);
 
-		Value *ElseV = Else->codegen();
-		if (!ElseV)
-			return nullptr;
-
-		Builder.CreateBr(MergeBB);
-		// codegen of 'Else' can change the current block, update ElseBB for the PHI.
-		ElseBB = Builder.GetInsertBlock();
+		if( nextIf != nullptr )
+			nextIf->codegen();
+		if (!activationRecordStack.front()->hasReturn())
+        	Builder.CreateBr(MergeBB);
 
 		// Emit merge block.
 		TheFunction->getBasicBlockList().push_back(MergeBB);
 		Builder.SetInsertPoint(MergeBB);
-		PHINode *PN = Builder.CreatePHI(Type::getDoubleTy(TheContext), 2, "iftmp");
+		activationRecordStack.front()->setCurrentBlock(MergeBB);
 
-		PN->addIncoming(ThenV, ThenBB);
-		PN->addIncoming(ElseV, ElseBB);
-		return PN;
+		return nullptr;
 	}
 
 private:
