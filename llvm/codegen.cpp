@@ -17,6 +17,10 @@
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/BasicBlock.h>
 
+#include "symbol.hpp"
+#include "error.hpp"
+#include "ast.hpp"
+
 /*******************************************************************************
  * ActivationRecord
  *******************************************************************************/
@@ -44,13 +48,13 @@ void ActivationRecord::setCurrentBlock(llvm::BasicBlock *BB) {
     this->hasRet    = false;
 }
 
-void ActivationRecord::addArg(std::string name, sem::TypePtr type, sem::PassMode mode) {
+void ActivationRecord::addArg(std::string name, Type type, PassMode mode) {
     auto *t = translateType(type, mode);
     args.push_back(t);
     varTypes[name] = t;
 }
 
-void ActivationRecord::addVar(std::string name, sem::TypePtr type, sem::PassMode mode) {
+void ActivationRecord::addVar(std::string name, Type type, PassMode mode) {
     varTypes[name] = translateType(type, mode);
 }
 
@@ -102,15 +106,15 @@ llvm::BasicBlock* ActivationRecord::getCurrentBlock() {
  * Scope
  *******************************************************************************/
 
-Scope::Scope() {  }
+LLVMScope::LLVMScope() {  }
 
-Scope::~Scope() {  }
+LLVMScope::~LLVMScope() {  }
 
-void Scope::openScope() {
+void LLVMScope::openScope() {
     this->functions.push_front(FuncMap());
 }
 
-void Scope::closeScope() {
+void LLVMScope::closeScope() {
     if (this->functions.empty()) {
         warning("No scopes to close");
         return;
@@ -118,11 +122,11 @@ void Scope::closeScope() {
     this->functions.pop_front();
 }
 
-void Scope::addFunc(std::string id, llvm::Function *func) {
+void LLVMScope::addFunc(std::string id, llvm::Function *func) {
     this->functions.front()[id] = func;
 }
 
-llvm::Function* Scope::getFunc(std::string id) {
+llvm::Function* LLVMScope::getFunc(std::string id) {
     for (auto funcs : this->functions) {
         if (funcs.find(id) != funcs.end())
             return funcs[id];

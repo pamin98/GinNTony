@@ -24,7 +24,7 @@
 #include <memory>
 #include <deque>
 
-using namespace llvm;
+// using namespace llvm;
 
 enum relOp
 {
@@ -60,56 +60,71 @@ enum HeaderType
 	Func_Def
 };
 
-static std::deque<std::shared_ptr<ActivationRecord>> activationRecordStack;
+static llvm::LLVMContext TheContext;
+static llvm::IRBuilder<> Builder;
+static std::unique_ptr<llvm::Module> TheModule;
+static std::map<std::string, llvm::AllocaInst *> NamedValues;
+
+static inline llvm::Constant *c32(int n) {
+    return llvm::ConstantInt::get(i32, n);
+}
+
+static inline llvm::Constant *c8(unsigned char b) {
+    return llvm::ConstantInt::get(i8, b);
+}
+
+static llvm::Type *i32 = llvm::Type::getInt32Ty(TheContext);
+static llvm::Type *i8 = llvm::Type::getInt8Ty(TheContext);
+static llvm::Type *proc = llvm::Type::getVoidTy(TheContext);
+
+static std::deque<ActivationRecord*> activationRecordStack;
 static LLVMScope scopes;
 
+
 // TODO REFERENCES
-llvm::Type *translateType(Type type)
+llvm::Type *translateType(Type type, PassMode mode = PASS_BY_VALUE)
 {
 	llvm::Type *ret;
 	switch (type->dtype)
 	{
 	case TYPE_INTEGER:
-		ret = i32;
+		ret = llvm::Type::getInt32Ty(TheContext);
 		break;
 	case TYPE_VOID:
-		ret = proc;
+		ret = llvm::Type::getVoidTy(TheContext);
 		break;
-	// TODO WORK ON THE REF SHIT HERE
 	case TYPE_LIST:
 		auto listType = translateType(type->refType);
-		auto myStructType = StructType::create(context, "myStruct"); 
-		auto myStructPtrType = PointerType::get(myStructType, 0); 
-		myStructType->setBody({ listType, myStructPtrType }, /* packed */ false); 
+		auto myStructType = llvm::StructType::create(TheContext, "myStruct"); 
+		auto myStructPtrType = llvm::PointerType::get(myStructType, 0); 
+		myStructType->setBody({ listType, myStructPtrType }, false); 
 		ret = myStructType;
 		break;
 	case TYPE_IARRAY:
 		ret = llvm::ArrayType::get(translateType(type->refType), type->size);
 		break;
 	}
-	// TODO HERE TOO WORK ON REF
-	if (mode == sem::PassMode::REFERENCE)
+	if (mode == PASS_BY_REFERENCE)
 		ret = ret->getPointerTo();
 	return ret;
 }
+
 
 class AST
 {
 public:
 	virtual ~AST() {}
 	virtual void sem() {}
-	virtual Value *codegen() = 0;
+	virtual llvm::Value *codegen() = 0;
 
-protected:
-	static LLVMContext TheContext;
-	static IRBuilder<> Builder;
-	static std::unique_ptr<Module> TheModule;
-	static std::map<std::string, AllocaInst *> NamedValues;
-
-	static llvm::Type *i32 = llvm::Type::getInt32Ty(TheContext);
-	static llvm::Type *i8 = llvm::Type::getInt8Ty(TheContext);
-	static llvm::Type *proc = llvm::Type::getVoidTy(TheContext);
+// protected:
+// 	static llvm::LLVMContext TheContext;
+// 	static llvm::IRBuilder<> Builder;
+// 	static std::unique_ptr<llvm::Module> TheModule;
+// 	static std::map<std::string, llvm::AllocaInst *> NamedValues;
 };
+
+
 
 class Expr : public AST
 {
@@ -160,10 +175,10 @@ public:
 			s->sem();
 	}
 
-	virtual Value *codegen() override
+	virtual llvm::Value *codegen() override
 	{
 		for (Stmt *s : stmt_list)
-			Value *v = s->codegen();
+			llvm::Value *v = s->codegen();
 		return nullptr;
 	}
 
@@ -189,7 +204,7 @@ public:
 		return var;
 	}
 
-	virtual Value *codegen() override
+	virtual llvm::Value *codegen() override
 	{
 		if (activationRecordStack.front()->isRef(var))
 		{
@@ -248,7 +263,7 @@ public:
 			newParameter(v, type, mode, f);
 	}
 
-	virtual Value *codegen() override
+	virtual llvm::Value *codegen() override
 	{
 		for (auto v : var_list->getList())
 		{
@@ -277,7 +292,7 @@ public:
 			formal->passParameters(f);
 	}
 
-	virtual Value *codegen() override
+	virtual llvm::Value *codegen() override
 	{
 		for (auto f : formal_list)
 			f->codegen();
@@ -335,7 +350,7 @@ public:
 		return this->type;
 	}
 
-	virtual char *getName()
+	virtual const char *getName()
 	{
 		return this->functionName;
 	}
@@ -365,7 +380,7 @@ public:
 			d->sem();
 	}
 
-	virtual Value *codegen() override
+	virtual llvm::Value *codegen() override
 	{
 		for (Definition *d : definition_list)
 			d->codegen();
@@ -404,12 +419,12 @@ public:
 		closeScope();
 	}
 
-	virtual Value *codegen() override
+	virtual llvm::Value *codegen() override
 	{
 		auto newBlock = new ActivationRecord();
 		activationRecordStack.push_front(newBlock);
 		header->getFormalList()->codegen();
-		if (scope.getFunc(header->getName()) == NULL)
+		if (scopes.getFunc(header->getName()) == NULL)
 		{
 			llvm::FunctionType *ftype = llvm::FunctionType::get(
 				translateType(this->header->getType()), activationRecordStack.front()->getArgs(), false);
@@ -424,6 +439,8 @@ public:
 			activationRecordStack.front()->setFunc(scopes.getFunc(header->getName()));
 
 		scopes.openScope();
+
+		llvm::Function *func = scopes.getFunc(header->getName());
 
 		int index = 0;
 		auto var_list = this->header->getFormalList()->get_arg_names();
@@ -489,7 +506,7 @@ public:
 		closeScope();
 	}
 
-	virtual void codegen()
+	virtual llvm::Value* codegen()
 	{
 		auto newBlock = new ActivationRecord();
 		activationRecordStack.push_front(newBlock);
@@ -525,12 +542,13 @@ public:
 			newVariable(variable, type);
 	}
 
-	virtual Value *codegen() override
+	virtual llvm::Value* codegen() override
 	{
 		for (const char *varName : var_list->getList())
 		{
-			auto *type = translateType(type);
-			auto *alloca = Builder.CreateAlloca(type, nullptr, varName);
+			auto *llvm_type = translateType(this->type);
+			auto *alloca = Builder.CreateAlloca(llvm_type, nullptr, varName);
+			
 			activationRecordStack.front()->addVar(varName, type);
 			activationRecordStack.front()->addVal(varName, alloca);
 		}
@@ -611,7 +629,7 @@ public:
 		}
 	}
 
-	virtual Value *codegen() override
+	virtual llvm::Value *codegen() override
 	{
 		llvm::Function *TheFunction = scopes.getFunc(this->functionName);
 
@@ -704,7 +722,7 @@ public:
 		error("Lvalue cannot be a string literal.");
 	}
 
-	virtual Value *codegen() override
+	virtual llvm::Value* codegen() override
 	{
 		return Builder.CreateGlobalStringPtr(this->str);
 	}
@@ -723,9 +741,9 @@ public:
 		type = typeInteger;
 	}
 
-	virtual Value *codegen() override
+	virtual llvm::Value* codegen() override
 	{
-		return llvm : ConstantInt::get(i32, num);
+		return llvm::ConstantInt::get(i32, num);
 	}
 
 private:
@@ -742,9 +760,9 @@ public:
 		type = typeChar;
 	}
 
-	virtual Value *codegen() override
+	virtual llvm::Value* codegen() override
 	{
-		return llvm : ConstantInt::get(i8, c);
+		return llvm::ConstantInt::get(i8, c);
 	}
 
 private:
@@ -769,10 +787,10 @@ public:
 		type = typeInteger;
 	}
 
-	virtual Value *codegen() override
+	virtual llvm::Value* codegen() override
 	{
-		Value *l;
-		Value *r = right->codegen();
+		llvm::Value *l;
+		llvm::Value *r = right->codegen();
 		if (left != NULL)
 			l = left->codegen();
 		switch (op)
@@ -828,10 +846,10 @@ public:
 
 	// TODO
 	/* Add sign extensions ?? */
-	virtual Value *codegen() override
+	virtual llvm::Value* codegen() override
 	{
-		Value *l = left->codegen();
-		Value *r = right->codegen();
+		llvm::Value *l = left->codegen();
+		llvm::Value *r = right->codegen();
 		// if(leftType->dtype == TYPE_BOOLEAN)
 		// {
 		// 	switch(op)
@@ -894,20 +912,20 @@ public:
 		type = typeBoolean;
 	}
 
-	virtual Value *codegen() override
+	virtual llvm::Value* codegen() override
 	{
-		Value *l;
-		Value *r;
+		llvm::Value *l;
+		llvm::Value *r;
 		if (left != NULL)
-			l = left->compile();
+			l = left->codegen();
 		if (right != NULL)
-			r = right->compile();
+			r = right->codegen();
 		switch (op)
 		{
 		case TRUE:
-			return ConstantInt::getTrue(TheContext);
+			return llvm::ConstantInt::getTrue(TheContext);
 		case FALSE:
-			return ConstantInt::getFalse(TheContext);
+			return llvm::ConstantInt::getFalse(TheContext);
 		case NOT:
 			return Builder.CreateNot(r, "nottmp");
 		case AND:
@@ -970,10 +988,10 @@ public:
 		}
 	}
 
-	virtual Value *codegen() override
+	virtual llvm::Value* codegen() override
 	{
-		Value *r = right->codegen();
-		Value *l;
+		llvm::Value *r = right->codegen();
+		llvm::Value *l;
 		if (left != NULL)
 			l = left->codegen();
 		if (op == head)
@@ -999,14 +1017,20 @@ public:
 		}
 		else if ( op == nil )
 		{
-			return ConstantPointerNull( translateType(TYPE_LIST) )
+			Type t = new Type_tag{
+				TYPE_LIST,
+				NULL,
+				0,
+				0
+			};
+			return llvm::ConstantPointerNull(translateType(t)->getPointerTo());
 		}
 		else if (  op == nilq )
 		{
-			if( ConstantPointerNull::classof(r)) 
-				return ConstantInt::getTrue(TheContext);
+			if( llvm::ConstantPointerNull::classof(r)) 
+				return llvm::ConstantInt::getTrue(TheContext);
 			else 
-				return ConstantInt::getFalse(TheContext);
+				return llvm::ConstantInt::getFalse(TheContext);
 		}
 	}
 
@@ -1035,6 +1059,16 @@ public:
 
 		type = array->getType()->refType;
 	}
+
+	llvm::Value* codegenIndex()
+	{
+		return index->codegen();
+	}
+
+	// virtual llvm::Value* codegen() override
+	// {
+
+	// }
 
 private:
 	Expr *array;
@@ -1066,14 +1100,14 @@ public:
 	// Sto semantic na koita3oume na tsekaroume oti ikanopoieitai kai to semantic tou assignStmt
 	// oti to aristero kommati exei to idio data type me to de3i kommati
 	// na ftia3oume parser.y sto 212
-	virtual Value *codegen() override
+	virtual llvm::Value* codegen() override
 	{
 		auto size = expr->codegen();
-		this->type->size = size;
+		// this->type->size = size;
 		auto *arrayType = translateType(this->type);
-		auto *alloca = Builder.CreateAlloca(this->type, nullptr, this->arrayName);
-		genBlocks.front()->addVar(this->arrayName, this->type);
-		genBlocks.front()->addVal(this->arrayName, alloca);
+		auto *alloca = Builder.CreateAlloca(arrayType, size, this->arrayName);
+		activationRecordStack.front()->addVar(this->arrayName, this->type);
+		activationRecordStack.front()->addVal(this->arrayName, alloca);
 		return nullptr;
 	}
 
@@ -1101,12 +1135,13 @@ public:
 		right->type_check(ltype);
 	}
 
-	virtual Value *codegen() override
+	virtual llvm::Value* codegen() override
 	{
-		Value *rval = right->codegen();
+		llvm::Value* rval = right->codegen();
+		llvm::Value* lval = left->codegen();
 
 		/* Normal Variable */
-		if (std::dynamic_pointer_cast<ArrayIndexing>(left) == nullptr)
+		if (std::dynamic_pointer_cast<ArrayIndexing*>(left) == nullptr)
 		{
 			if (activationRecordStack.front()->isRef(lval->getName()))
 			{
@@ -1121,8 +1156,9 @@ public:
 		/* Array */
 		else
 		{
-			auto *idx = lval->index->codegen();
-			Value *val;
+			// std::dynamic_pointer_cast<ArrayIndexing>()
+			auto *idx = dynamic_cast<ArrayIndexing*>(left)->codegenIndex();
+			llvm::Value *val;
 			if (activationRecordStack.front()->isRef(lval->getName()))
 			{
 				val = Builder.CreateLoad(activationRecordStack.front()->getAddr(lval->getName()));
@@ -1130,7 +1166,7 @@ public:
 			}
 			else
 			{
-				val = Builder.CreateGEP(activationRecordStack.front()->getVal(lval->getName()), std::vector<Value *>{c32(0), idx});
+				val = Builder.CreateGEP(activationRecordStack.front()->getVal(lval->getName()), std::vector<llvm::Value *>{c32(0), idx});
 			}
 			return Builder.CreateStore(rval, val);
 		}
@@ -1170,6 +1206,12 @@ public:
 			error("Invalid type of return expression: Expected %s, found %s.", TypeToStr(returnType), TypeToStr(exprType));
 	}
 
+	virtual llvm::Value* codegen() override
+	{
+		activationRecordStack.front()->addRet();
+        return Builder.CreateRet(this->returnExpr->codegen());
+	}
+
 private:
 	Expr *returnExpr;
 };
@@ -1206,23 +1248,23 @@ public:
 
 	// TODO while instead of recursive
 	// TODO check if setting basic blocks in AR is redundant 
-	virtual Value *codegen() override
+	virtual llvm::Value* codegen() override
 	{
 		if( cond == NULL && stmt_list != NULL )
 			return stmt_list->codegen();
 
-		Value *CondV = cond->codegen();
+		llvm::Value *CondV = cond->codegen();
 
 		// Convert condition to a bool by comparing non-equal to 0.0.
-		CondV = Builder.CreateFCmpONE(CondV, ConstantFP::get(TheContext, APFloat(0.0)), "ifcond");
+		CondV = Builder.CreateFCmpONE(CondV, llvm::ConstantFP::get(TheContext, llvm::APFloat(0.0)), "ifcond");
 
-		Function *TheFunction = Builder.GetInsertBlock()->getParent();
+		llvm::Function *TheFunction = Builder.GetInsertBlock()->getParent();
 
 		// Create blocks for the then and else cases.  Insert the 'then' block at the
 		// end of the function.
-		BasicBlock *ThenBB = BasicBlock::Create(TheContext, "then", TheFunction);
-		BasicBlock *ElseBB = BasicBlock::Create(TheContext, "else");
-		BasicBlock *MergeBB = BasicBlock::Create(TheContext, "ifcont");
+		llvm::BasicBlock *ThenBB = llvm::BasicBlock::Create(TheContext, "then", TheFunction);
+		llvm::BasicBlock *ElseBB = llvm::BasicBlock::Create(TheContext, "else");
+		llvm::BasicBlock *MergeBB = llvm::BasicBlock::Create(TheContext, "ifcont");
 
 		Builder.CreateCondBr(CondV, ThenBB, ElseBB);
 
@@ -1278,20 +1320,20 @@ public:
 		loop_body->sem();
 	}
 
-	virtual Value *codegen() override
+	virtual llvm::Value* codegen() override
 	{
 		initializers->codegen();
 
-		Function *TheFunction = Builder.GetInsertBlock()->getParent();
-		BasicBlock *LoopBB = BasicBlock::Create(TheContext, "loop", TheFunction);
-		BasicBlock *AfterBB = llvm::BasicBlock::Create(TheContext, "after");
+		llvm::Function *TheFunction = Builder.GetInsertBlock()->getParent();
+		llvm::BasicBlock *LoopBB = llvm::BasicBlock::Create(TheContext, "loop", TheFunction);
+		llvm::BasicBlock *AfterBB = llvm::BasicBlock::Create(TheContext, "after");
 
-		Value *CondV = threshold->codegen();
+		llvm::Value *CondV = threshold->codegen();
 		if (!CondV)
 			return nullptr;
 
 		// Convert condition to a bool by comparing non-equal to 0.0.
-		CondV = Builder.CreateFCmpONE(CondV, ConstantFP::get(TheContext, APFloat(0.0)), "loopcond");
+		CondV = Builder.CreateFCmpONE(CondV, llvm::ConstantFP::get(TheContext, llvm::APFloat(0.0)), "loopcond");
 
 		Builder.CreateCondBr(CondV, LoopBB, AfterBB);
 
@@ -1299,17 +1341,17 @@ public:
 		Builder.SetInsertPoint(LoopBB);
 		activationRecordStack.front()->setCurrentBlock(LoopBB);
 
-		loop_body->codegen()
+		loop_body->codegen();
 
 		// Emit the step value.
 		steps->codegen();
 
-		Value *CondV = threshold->codegen();
+		llvm::Value *CondV = threshold->codegen();
 		if (!CondV)
 			return nullptr;
 
 		// Convert condition to a bool by comparing non-equal to 0.0.
-		CondV = Builder.CreateFCmpONE(CondV, ConstantFP::get(TheContext, APFloat(0.0)), "loopcond");
+		CondV = Builder.CreateFCmpONE(CondV, llvm::ConstantFP::get(TheContext, llvm::APFloat(0.0)), "loopcond");
 
 		// Insert the conditional branch into the end of LoopEndBB.
 		Builder.CreateCondBr(CondV, LoopBB, AfterBB);

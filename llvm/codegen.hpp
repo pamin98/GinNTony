@@ -20,8 +20,8 @@
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/BasicBlock.h>
 
-#include <symbol/types.hpp>
-#include <symbol/entry.hpp>
+// #include "types.hpp"
+// #include "entry.hpp"
 
 /*******************************************************************************
  * FuncStack :
@@ -75,13 +75,13 @@ class ActivationRecord {
         void setFunc(llvm::Function *func);
         void setCurrentBlock(llvm::BasicBlock *BB);
 
-        void addArg(std::string name, sem::TypePtr type, sem::PassMode mode);
-        void addVar(std::string name, sem::TypePtr type, sem::PassMode mode = sem::PassMode::VALUE);
+        void addArg(std::string name, Type type, PassMode mode);
+        void addVar(std::string name, Type type, PassMode mode = PASS_BY_VALUE);
         void addVal(std::string name, llvm::AllocaInst *val);
         void addAddr(std::string name, llvm::AllocaInst *addr);
         void addRet();
 
-        const TypeVec& getArgs() const;
+        const std::vector<llvm::Type*>& getArgs() const;
         llvm::Type* getVar(std::string name);
         llvm::AllocaInst* getVal(std::string name);
         llvm::AllocaInst* getAddr(std::string name);
@@ -94,10 +94,10 @@ class ActivationRecord {
 
 class LLVMScope {
     private:
-        std::deque<FuncMap> functions;
+        std::deque<std::unordered_map<std::string, llvm::Function*>> functions;
     public:
-        Scope();
-        ~Scope();
+        LLVMScope();
+        ~LLVMScope();
 
         void openScope();
         void closeScope();
