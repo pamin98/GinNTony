@@ -9,6 +9,7 @@
 #include "lexer.hpp"
 #include "symbol.hpp"
 
+
 // ST_SIZE must be a prime number
 #define 	ST_SIZE 	257
 %}
@@ -120,7 +121,7 @@
 %%
 
 program:		
-		func_def						{ $1->sem(); }
+		func_def						{ $1->sem(); /*$1->codegen()*/ }
 		;
 
 func_def:
@@ -235,7 +236,7 @@ expr_head:
 atom:
 		  T_var							{ $$ = new Var($1); }
 		| T_constString					{ $$ = new ConstString($1); }
-		| atom '[' expr ']'				{ $$ = new ArrayIndexing($1,$3); }		
+		| T_var '[' expr ']'				{ $$ = new Var($1,$3); }		
 		| call							{ $$ = $1; }
 		;
 
@@ -274,9 +275,14 @@ expr:
 
 int main()
 {
+	printf("Hello Starting");
 	initSymbolTable(ST_SIZE);
+	printf("HELLO INITIATED");
 	openScope();
+	printf("HELLO OPENED SCOPE");
+	printf("HELLO YYPARSING\n");
 	int result = yyparse();
+	printf("FINISHED YYPARSING\n");
 	destroySymbolTable();
 	return result;
 }

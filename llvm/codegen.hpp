@@ -1,14 +1,3 @@
-/*******************************************************************************
- *                                                                             *
- *  Filename    : codegen.hpp                                                  *
- *  Project     : Alan Compiler                                                *
- *  Version     : 1.0                                                          *
- *  Author      : Spiros Dontas                                                *
- *  Email       : spirosdontas@gmail.com                                       *
- *                                                                             *
- *  Description : Codegen header file (llvm stuff)                             *
- *                                                                             *
- *******************************************************************************/
 
 #ifndef __CODEGEN_HPP__
 #define __CODEGEN_HPP__
@@ -23,42 +12,10 @@
 // #include "types.hpp"
 // #include "entry.hpp"
 
-/*******************************************************************************
- * FuncStack :
- *   - used for checking variables and basicblocks.
- *   > When we find a function declaration we need to remember the previous
- *   > BasicBlock of the previous function so that we can continue to emit code
- *   > there after finishing up here
- * FuncMap :
- *   - used to fetch Function* for the "active" functions.
- *   > This will help us check which arguments need to be passed by reference
- *   > so that we know a var is needed to be passed there.
- *******************************************************************************/
-
-/*******************************************************************************
- ****************************** Class Definitions ******************************
- *******************************************************************************/
+#include "symbol.hpp"
 
 class ActivationRecord;
 
-/*******************************************************************************
- * ActivationRecord Class
- *   - args :
- *     > Used to hold argument types so that we can pass them to
- *     > `llvm::FunctionType::get( llvm::Type*,
- *                                 args,
- *                                 false )`
- *   - varTypes :
- *     > Used to hold the types of all scope variables.
- *     > Useful to know when we have referenced variables
- *     > ( as parameters that is ).
- *   - varValues :
- *     > Used to hold values of AllocaInst.
- *   - addresses :
- *     > Used to hold addresses of referenced values.
- *   - currentBB :
- *     > The currentBasicBlock for this function.
- *******************************************************************************/
 class ActivationRecord {
     private :
         llvm::Function   *func;
