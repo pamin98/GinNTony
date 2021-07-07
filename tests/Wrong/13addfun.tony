@@ -1,0 +1,6 @@
+def main ():
+   def int f (): return 0 end
+   def int g (): return 0 end
+   puti(f+g)
+   puts("\nThis program is wrong!\n")
+end

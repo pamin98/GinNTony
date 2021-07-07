@@ -1,0 +1,22 @@
+def main ():
+
+   def correct ():
+      puts("\n---\n")
+      puts("truefalsetruefalsefalse\n")
+   end
+
+   def bool lala (bool a; ref bool b):
+      return a and b
+   end
+
+   bool a, b
+
+   a := true
+   b := false
+   putb(true)
+   putb(false)
+   putb(a)
+   putb(b)
+   putb(lala(false, a))
+   correct()
+end

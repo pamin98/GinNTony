@@ -1,0 +1,27 @@
+def cancer ():
+
+   def bool is_it (int n; char[] source):
+      int i
+      for i:=0; i < n / 2; i:=i+1:
+         if source[i] <> source[n-i-1]:
+            return false
+         end
+      end
+      return true
+   end
+	
+   int n
+   char[] source
+   source := new char[30]   
+
+   puts("Give a string with maximum length 30: ")
+   gets(30, source)
+   for n := 0; source[n] <> '\0'; skip:
+      n := n+1
+   end
+   if is_it(n, source):
+      puts("\nIs cancer...\n")
+   else:
+      puts("\nIs not cancer...\n")
+   end
+end

@@ -1,0 +1,9 @@
+def main ():
+
+   def f (int a):
+     return a
+   end
+
+   f(5)
+   puts("\nThis program is wrong!\n")
+end

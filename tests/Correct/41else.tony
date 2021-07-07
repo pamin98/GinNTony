@@ -1,0 +1,19 @@
+def testelse ():
+
+   def test (int x; char [] msg1, msg2, msg3):
+      if x <> 1:
+        if x <> 2:
+          puts(msg3)
+        else:
+          puts(msg2)
+        end
+      end
+      if x = 1:
+        puts(msg1)
+      end
+   end
+
+   test(1, "4", "\n\nwrong!!!\n\n", "\n\nwrong!!!\n\n")
+   test(2, "\n\nwrong!!!\n\n", "2", "\n\nwrong!!!\n\n")
+   test(3, "\n\nwrong!!!\n\n", "\n\nwrong!!!\n\n", "\n")
+end

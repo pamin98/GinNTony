@@ -121,7 +121,7 @@
 %%
 
 program:		
-		func_def						{ $1->sem(); /*$1->codegen()*/ }
+		func_def						{ $1->sem(); $1->llvm_compiler_and_dump(); }
 		;
 
 func_def:
@@ -275,14 +275,10 @@ expr:
 
 int main()
 {
-	printf("Hello Starting");
 	initSymbolTable(ST_SIZE);
-	printf("HELLO INITIATED");
 	openScope();
-	printf("HELLO OPENED SCOPE");
-	printf("HELLO YYPARSING\n");
+	printf("Starting Parsing\n");
 	int result = yyparse();
-	printf("FINISHED YYPARSING\n");
 	destroySymbolTable();
 	return result;
 }

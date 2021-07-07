@@ -1,0 +1,7 @@
+def add ():
+   int x, y
+   x := 14
+   y := 28
+   puti(x + y)
+   puts("\n")
+end

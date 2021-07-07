@@ -276,6 +276,7 @@ int main()
 	initSymbolTable(ST_SIZE);
 	openScope();
 	int result = yyparse();
+	printf("Finished parsing with %d", result);
 	destroySymbolTable();
 	return result;
 }

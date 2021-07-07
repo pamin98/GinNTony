@@ -1,0 +1,20 @@
+def main ():
+   
+   def int fact (int n):
+      if n = 0:
+        return 1
+      else:
+        return n * fact (n - 1)
+      end
+   end
+
+   int z
+
+  z := fact(7)
+  if z = 5040:
+    puts("42\n")
+  else:
+    puti(z)
+    puts(" wrong!\n")
+  end
+end

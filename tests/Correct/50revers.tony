@@ -1,0 +1,25 @@
+def revers ():
+
+   def int length (char[] s):
+      int result
+      for result := 0; s[result] <> '\0'; skip:
+         result := result + 1
+      end
+      return result
+   end
+
+   def reverse (char[] s, r):
+      int i, l
+      l := length(s)
+      for i := 0; i < l; i := i+1:
+         r[i] := s[l-i-1]
+      end
+      r[i] := '\0'
+   end
+
+   char[] p
+   p := new char[42]
+
+   reverse("\n!dlrow olleH", p)
+   puts(p)
+end

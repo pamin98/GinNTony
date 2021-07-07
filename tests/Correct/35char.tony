@@ -1,0 +1,57 @@
+def char1 ():
+
+   def correct ():
+      puts("\n---\n")
+      puts("$\na\\\na4123oaoch\n")
+   end
+
+   def char lala (char c; ref char d):
+      if ord(c) > ord(d):
+         return c
+      else:
+         return d
+      end
+   end
+
+   char c, d, e
+   char[] s
+   int i
+
+   c := '$'
+   d := '\n'
+
+   putc(c)
+   putc(d)
+   putc('a')
+   putc('\\')
+   putc('\n')
+   
+   putc(lala('a', d))
+   
+   s := "12345678"
+   i := 3
+   c := s[i]
+   d := s[0]
+   e := s[8]
+   
+   putc(c)
+   putc(d)
+   putc(e)
+   
+   i := 1
+   putc(s[i])
+   putc(s[2])
+   
+   i := 3
+   c := "coco"[i]
+   putc(c)
+   putc("lala"[i])
+   
+   c := "coco"[1]
+   putc(c)
+   putc("coco"[2])
+   
+   putc(lala("haha"[2], s[1]))
+   
+   correct ()   
+end

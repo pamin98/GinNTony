@@ -1,0 +1,8 @@
+def arr ():
+   int[] a
+   a := new int[32]
+   a[0] := 14
+   a[24] := 28
+   puti(a[0] + a[24])
+   puts("\n")
+end

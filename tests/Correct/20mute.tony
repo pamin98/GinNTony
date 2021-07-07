@@ -1,0 +1,18 @@
+def main ():
+
+   int x
+   
+   def int f (int n):
+      int s, i
+      s := 0
+      for i := 1; i <= n; i := i + 1:
+         s := s + i
+      end
+      return s
+   end
+
+   x := 6
+   x := f(x) + f(f(3))
+   puti(x)
+   puts("\n")
+end

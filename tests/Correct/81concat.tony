@@ -1,0 +1,20 @@
+def main ():
+
+   def list[int] append (list[int] l, r):
+      if nil?(l):
+         return r
+      else:
+         return head(l) # append(tail(l), r)
+      end
+   end
+
+   def list[int] concat (list[list[int]] l):
+      if nil?(l):
+         return nil
+      else:
+         return append(head(l), concat(tail(l)))
+      end
+   end
+
+   puts("42\n")
+end

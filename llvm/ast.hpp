@@ -12,10 +12,13 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Verifier.h"
 
+#include "llvm/IR/LegacyPassManager.h"
+
 #include <iostream>
 #include <map>
 #include <vector>
 #include <string>
+#include <string.h>
 #include <algorithm>
 #include "symbol.hpp"
 #include "error.hpp"
@@ -25,6 +28,8 @@
 #include <deque>
 
 // using namespace llvm;
+
+static void codegenLibs();
 
 enum relOp
 {
@@ -61,10 +66,10 @@ enum HeaderType
 };
 
 static llvm::LLVMContext TheContext;
-// static llvm::IRBuilder<> Builder;
-static std::unique_ptr<llvm::IRBuilder<>> Builder;
+static llvm::IRBuilder<> Builder(TheContext);
 static std::unique_ptr<llvm::Module> TheModule;
 static std::map<std::string, llvm::AllocaInst *> NamedValues;
+static std::unique_ptr<llvm::legacy::FunctionPassManager> TheFPM;
 
 static llvm::Type *i32 = llvm::Type::getInt32Ty(TheContext);
 static llvm::Type *i8 = llvm::Type::getInt8Ty(TheContext);
@@ -92,6 +97,7 @@ inline llvm::Type *translateType(Type type, PassMode mode = PASS_BY_VALUE)
 	case TYPE_INTEGER:
 	{
 		ret = llvm::Type::getInt32Ty(TheContext);
+		ret->isPointerTy();
 		break;
 	}
 	case TYPE_VOID:
@@ -100,7 +106,8 @@ inline llvm::Type *translateType(Type type, PassMode mode = PASS_BY_VALUE)
 		break;
 	}
 	case TYPE_LIST:
-	{	auto listType = translateType(type->refType);
+	{
+		auto listType = translateType(type->refType);
 		auto myStructType = llvm::StructType::create(TheContext, "myStruct");
 		auto myStructPtrType = llvm::PointerType::get(myStructType, 0);
 		myStructType->setBody({listType, myStructPtrType}, false);
@@ -125,18 +132,32 @@ class AST
 public:
 	virtual ~AST() {}
 	virtual void sem() {}
-	// virtual llvm::Value *codegen() = 0;
 
 	virtual llvm::Value *codegen()
 	{
 		return nullptr;
 	}
 
-	// protected:
-	// 	static llvm::LLVMContext TheContext;
-	// 	static llvm::IRBuilder<> Builder;
-	// 	static std::unique_ptr<llvm::Module> TheModule;
-	// 	static std::map<std::string, llvm::AllocaInst *> NamedValues;
+	void llvm_compiler_and_dump()
+	{
+		scopes.openScope();
+		TheModule = std::make_unique<llvm::Module>("program", TheContext);
+		TheFPM = std::make_unique<llvm::legacy::FunctionPassManager>(TheModule.get());
+		TheFPM->doInitialization();
+
+		codegenLibs();
+
+		llvm::FunctionType *main_type = llvm::FunctionType::get(i32, {}, false);
+		llvm::Function *main =
+			llvm::Function::Create(main_type, llvm::Function::ExternalLinkage,
+								   "main", TheModule.get());
+		llvm::BasicBlock *BB = llvm::BasicBlock::Create(TheContext, "entry", main);
+		Builder.SetInsertPoint(BB);
+		this->codegen();
+		Builder.CreateRet(c32(0));
+		TheFPM->run(*main);
+		TheModule->print(llvm::outs(), nullptr);
+	}
 };
 
 class Expr : public AST
@@ -188,6 +209,12 @@ public:
 			s->sem();
 	}
 
+	void reverse()
+	{
+		std::reverse(this->stmt_list.begin(), this->stmt_list.end());
+		// this->stmt_list.
+	}
+
 	virtual llvm::Value *codegen() override
 	{
 		for (Stmt *s : stmt_list)
@@ -204,6 +231,19 @@ class Var : public Expr
 public:
 	Var(const char *v, Expr *i = NULL) : var(v), index(i) {}
 
+
+
+// 	virtual void sem() override
+// 	{
+// 		if (index->getType()->dtype != TYPE_INTEGER)
+// 			error("Array index must be of type integer.");
+// 		if (array->getType()->dtype != TYPE_IARRAY)
+// 			error("Expected array, found %s", TypeToStr(array->getType()));
+
+// 		type = array->getType()->refType;
+// 	}
+
+
 	virtual void sem() override
 	{
 		SymbolEntry *e = lookupEntry(var, LOOKUP_ALL_SCOPES, true);
@@ -216,6 +256,10 @@ public:
 
 		if (index != NULL && this->getType()->dtype != TYPE_IARRAY)
 			error("Expected array, found %s", TypeToStr(this->getType()));
+		
+		if (index != NULL)
+			type = type->refType;
+
 	}
 
 	bool isArray()
@@ -235,13 +279,20 @@ public:
 
 	virtual llvm::Value *codegen() override
 	{
-		if (activationRecordStack.front()->isRef(var))
+
+		ActivationRecord *ar;
+		for (auto a : activationRecordStack)
 		{
-			auto *addr = Builder->CreateLoad(activationRecordStack.front()->getAddr(var));
-			return Builder->CreateLoad(addr);
+			if (a->varExists(var))
+				ar = a;
+		}
+		if (ar->isRef(var))
+		{
+			auto *addr = Builder.CreateLoad(ar->getAddr(var));
+			return Builder.CreateLoad(addr);
 		}
 		else
-			return Builder->CreateLoad(activationRecordStack.front()->getVal(var));
+			return Builder.CreateLoad(ar->getVal(var));
 
 		return nullptr;
 	}
@@ -463,6 +514,7 @@ public:
 		auto newBlock = new ActivationRecord();
 		activationRecordStack.push_front(newBlock);
 		header->getFormalList()->codegen();
+
 		if (scopes.getFunc(header->getName()) == NULL)
 		{
 			llvm::FunctionType *ftype = llvm::FunctionType::get(
@@ -472,7 +524,7 @@ public:
 				ftype, llvm::Function::ExternalLinkage, header->getName(), TheModule.get());
 
 			activationRecordStack.front()->setFunc(func);
-			scopes.addFunc(header->getName(), func);
+			scopes.addFunc(std::string(header->getName()), func);
 		}
 		else
 			activationRecordStack.front()->setFunc(scopes.getFunc(header->getName()));
@@ -485,42 +537,42 @@ public:
 		auto var_list = this->header->getFormalList()->get_arg_names();
 		for (auto &Arg : func->args())
 			Arg.setName(var_list[index++]);
+		
 
 		llvm::BasicBlock *FuncBB = llvm::BasicBlock::Create(TheContext, "entry", func);
-		Builder->SetInsertPoint(FuncBB);
+		Builder.SetInsertPoint(FuncBB);
 		activationRecordStack.front()->setCurrentBlock(FuncBB);
 		for (auto &Arg : func->args())
 		{
-			// Arg.getName()
-			auto *alloca = Builder->CreateAlloca(Arg.getType(), nullptr, Arg.getName().str());
+			auto *alloca = Builder.CreateAlloca(Arg.getType(), nullptr, Arg.getName().str());
 			if (Arg.getType()->isPointerTy())
 				activationRecordStack.front()->addAddr(Arg.getName().str(), alloca);
 			else
 				activationRecordStack.front()->addVal(Arg.getName().str(), alloca);
-			Builder->CreateStore(&Arg, alloca);
+			Builder.CreateStore(&Arg, alloca);
 		}
 
 		def_list->codegen();
 		stmt_list->codegen();
 
 		if (func->getReturnType()->isVoidTy())
-			Builder->CreateRetVoid();
+			Builder.CreateRetVoid();
 		else
 		{
 			if (!activationRecordStack.front()->hasReturn())
 			{
 				if (func->getReturnType()->isIntegerTy(32))
-					Builder->CreateRet(c32(0));
+					Builder.CreateRet(c32(0));
 				else
-					Builder->CreateRet(c8(0));
+					Builder.CreateRet(c8(0));
 			}
 		}
 
 		activationRecordStack.pop_front();
 		scopes.closeScope();
 
-		if(activationRecordStack.size() != 0 )
-			Builder->SetInsertPoint(activationRecordStack.front()->getCurrentBlock());
+		if (activationRecordStack.size() != 0)
+			Builder.SetInsertPoint(activationRecordStack.front()->getCurrentBlock());
 
 		// if (!main)
 		// 	Builder.SetInsertPoint(activationRecordStack.front()->getCurrentBlock());
@@ -591,8 +643,8 @@ public:
 	{
 		for (const char *varName : var_list->getList())
 		{
-			auto *llvm_type = translateType(this->type);
-			auto *alloca = Builder->CreateAlloca(llvm_type, nullptr, varName);
+			auto llvm_type = translateType(this->type);
+			auto alloca = Builder.CreateAlloca(llvm_type, nullptr, varName);
 
 			activationRecordStack.front()->addVar(varName, type);
 			activationRecordStack.front()->addVal(varName, alloca);
@@ -638,6 +690,22 @@ public:
 
 	virtual void sem() override
 	{
+		if( strcmp(functionName,"puti") == 0 || strcmp(functionName,"putb") == 0 || strcmp(functionName,"putc") == 0 || strcmp(functionName,"puts") == 0 )
+		{
+			return;
+		}
+		if( strcmp(functionName,"geti") == 0 || strcmp(functionName,"getb") == 0 || strcmp(functionName,"getc") == 0 || strcmp(functionName,"gets") == 0 )
+		{
+			return;
+		}
+		if( strcmp(functionName,"abs") == 0 || strcmp(functionName,"ord") == 0 || strcmp(functionName,"chr") == 0 )
+		{
+			return;
+		}
+		if( strcmp(functionName,"strlen") == 0 || strcmp(functionName,"strcmp") == 0 || strcmp(functionName,"strcpy") == 0 || strcmp(functionName,"strcat") == 0 )
+		{
+			return;
+		}
 		int functionArguments = 0;
 		bool argMismatch = false;
 		SymbolEntry *f = lookupEntry(functionName, LOOKUP_ALL_SCOPES, true);
@@ -695,14 +763,14 @@ public:
 					{
 						if (activationRecordStack.front()->isRef(var->getName()))
 						{
-							auto par = Builder->CreateLoad(activationRecordStack.front()->getAddr(var->getName()));
+							auto par = Builder.CreateLoad(activationRecordStack.front()->getAddr(var->getName()));
 							callArgs.push_back(par);
 						}
 						else
 						{
 							llvm::Value *par;
 							if (activationRecordStack.front()->getVar(var->getName())->isArrayTy())
-								par = Builder->CreateGEP(activationRecordStack.front()->getVal(var->getName()), std::vector<llvm::Value *>{c32(0), c32(0)});
+								par = Builder.CreateGEP(activationRecordStack.front()->getVal(var->getName()), std::vector<llvm::Value *>{c32(0), c32(0)});
 							// par = Builder.CreateConstGEP1_32(activationRecordStack.front()->getVal(var->getName()), 0)
 							else
 								par = activationRecordStack.front()->getVal(var->getName());
@@ -714,19 +782,29 @@ public:
 						auto idx = var->getIndex()->codegen();
 						if (activationRecordStack.front()->isRef(var->getName()))
 						{
-							llvm::Value *par = Builder->CreateLoad(activationRecordStack.front()->getAddr(var->getName()));
-							par = Builder->CreateGEP(par, idx);
+							llvm::Value *par = Builder.CreateLoad(activationRecordStack.front()->getAddr(var->getName()));
+							par = Builder.CreateGEP(par, idx);
 							callArgs.push_back(par);
 						}
 						else
 						{
 							llvm::Value *par = activationRecordStack.front()->getVal(var->getName());
-							par = Builder->CreateGEP(par, std::vector<llvm::Value *>{c32(0), idx});
+							par = Builder.CreateGEP(par, std::vector<llvm::Value *>{c32(0), idx});
 							callArgs.push_back(par);
 						}
 					}
 					index++;
 					continue;
+				}
+				else
+				{
+					// auto strlit = std::dynamic_pointer_cast<ConstString>(functionArgs[index]);
+					/* Found string literal */
+					// if (strlit) {
+					callArgs.push_back(functionArgs[index]->codegen());
+					index++;
+					continue;
+					// }
 				}
 			}
 			else
@@ -736,7 +814,7 @@ public:
 				index++;
 			}
 		}
-		return Builder->CreateCall(TheFunction, callArgs);
+		return Builder.CreateCall(TheFunction, callArgs);
 	}
 
 	virtual void checkLVal() override
@@ -766,7 +844,7 @@ public:
 
 	virtual llvm::Value *codegen() override
 	{
-		return Builder->CreateGlobalStringPtr(this->str);
+		return Builder.CreateGlobalStringPtr(this->str);
 	}
 
 private:
@@ -840,17 +918,17 @@ public:
 		case '+':
 			if (left == NULL)
 				return r;
-			return Builder->CreateAdd(l, r, "addtmp");
+			return Builder.CreateAdd(l, r, "addtmp");
 		case '-':
 			if (left == NULL)
-				return Builder->CreateNeg(r, "negtmp");
-			return Builder->CreateSub(l, r, "subtmp");
+				return Builder.CreateNeg(r, "negtmp");
+			return Builder.CreateSub(l, r, "subtmp");
 		case '*':
-			return Builder->CreateMul(l, r, "multmp");
+			return Builder.CreateMul(l, r, "multmp");
 		case '/':
-			return Builder->CreateSDiv(l, r, "divtmp");
+			return Builder.CreateSDiv(l, r, "divtmp");
 		case '%':
-			return Builder->CreateSRem(l, r, "modtmp");
+			return Builder.CreateSRem(l, r, "modtmp");
 		}
 		return NULL;
 	}
@@ -886,36 +964,24 @@ public:
 			error("Comparisons supported only for integers, booleans and characters.");
 	}
 
-	// TODO
-	/* Add sign extensions ?? */
 	virtual llvm::Value *codegen() override
 	{
 		llvm::Value *l = left->codegen();
 		llvm::Value *r = right->codegen();
-		// if(leftType->dtype == TYPE_BOOLEAN)
-		// {
-		// 	switch(op)
-		// 	{
-		// 		case gt:  return Builder.CreateICmpUGT(l, r, "gtcheck");
-		// 		case lt:  return Builder.CreateICmpULT(l, r, "ltcheck");
-		// 		case ge:  return Builder.CreateICmpUGE(l, r, "gecheck");
-		// 		case le:  return Builder.CreateICmpULE(l, r, "lecheck");
-		// 	}
-		// }
 		switch (op)
 		{
 		case eq:
-			return Builder->CreateICmpEQ(l, r, "eqcheck");
+			return Builder.CreateICmpEQ(l, r, "eqcheck");
 		case neq:
-			return Builder->CreateICmpNE(l, r, "neqcheck");
+			return Builder.CreateICmpNE(l, r, "neqcheck");
 		case gt:
-			return Builder->CreateICmpSGT(l, r, "gtcheck");
+			return Builder.CreateICmpSGT(l, r, "gtcheck");
 		case lt:
-			return Builder->CreateICmpSLT(l, r, "ltcheck");
+			return Builder.CreateICmpSLT(l, r, "ltcheck");
 		case ge:
-			return Builder->CreateICmpSGE(l, r, "gecheck");
+			return Builder.CreateICmpSGE(l, r, "gecheck");
 		case le:
-			return Builder->CreateICmpSLE(l, r, "lecheck");
+			return Builder.CreateICmpSLE(l, r, "lecheck");
 		}
 		return NULL;
 	}
@@ -969,11 +1035,11 @@ public:
 		case FALSE:
 			return llvm::ConstantInt::getFalse(TheContext);
 		case NOT:
-			return Builder->CreateNot(r, "nottmp");
+			return Builder.CreateNot(r, "nottmp");
 		case AND:
-			return Builder->CreateAnd(l, r, "andtmp");
+			return Builder.CreateAnd(l, r, "andtmp");
 		case OR:
-			return Builder->CreateOr(l, r, "ortmp");
+			return Builder.CreateOr(l, r, "ortmp");
 		}
 		return NULL;
 	}
@@ -1038,27 +1104,27 @@ public:
 			l = left->codegen();
 		if (op == head)
 		{
-			r = Builder->CreateGEP(r, 0);
-			return Builder->CreateLoad(r);
+			r = Builder.CreateGEP(r, 0);
+			return Builder.CreateLoad(r);
 		}
 		else if (op == tail)
 		{
 			// r = Builder.CreateGEP(r, 1);
-			r = Builder->CreateConstGEP1_32(r, 1);
-			return Builder->CreateLoad(r);
+			r = Builder.CreateConstGEP1_32(r, 1);
+			return Builder.CreateLoad(r);
 		}
 		else if (op == append)
 		{
-			auto *new_head_alloca = Builder->CreateAlloca(r->getType(), nullptr);
-			auto *new_head_struct = Builder->CreateLoad(new_head_alloca);
+			auto *new_head_alloca = Builder.CreateAlloca(r->getType(), nullptr);
+			auto *new_head_struct = Builder.CreateLoad(new_head_alloca);
 
 			// auto *new_val_address = Builder.CreateGEP(new_head_struct,1);
-			auto *new_val_address = Builder->CreateConstGEP1_32(new_head_struct, 1);
-			Builder->CreateStore(l, new_val_address);
+			auto *new_val_address = Builder.CreateConstGEP1_32(new_head_struct, 1);
+			Builder.CreateStore(l, new_val_address);
 
 			// auto *new_head_next = Builder.CreateGEP(new_head_struct,0);
-			auto *new_head_next = Builder->CreateConstGEP1_32(new_head_struct, 0);
-			Builder->CreateStore(r, new_head_next);
+			auto *new_head_next = Builder.CreateConstGEP1_32(new_head_struct, 0);
+			Builder.CreateStore(r, new_head_next);
 		}
 		else if (op == nil)
 		{
@@ -1153,7 +1219,7 @@ public:
 		auto size = expr->codegen();
 		// this->type->size = size;
 		auto *arrayType = translateType(this->type);
-		auto *alloca = Builder->CreateAlloca( arrayType , size, this->variable->getName());
+		auto *alloca = Builder.CreateAlloca(arrayType, size, this->variable->getName());
 		activationRecordStack.front()->addVar(variable->getName(), this->type);
 		activationRecordStack.front()->addVal(variable->getName(), alloca);
 		return nullptr;
@@ -1186,40 +1252,42 @@ public:
 	virtual llvm::Value *codegen() override
 	{
 		llvm::Value *rval = right->codegen();
-		llvm::Value *lval = left->codegen();
+		// llvm::Value *lval = left->codegen();
 
-		/* Normal Variable */
-		// if (std::dynamic_pointer_cast<ArrayIndexing*>(left) == nullptr)
-		// if (dynamic_cast<ArrayIndexing*>(left) == nullptr)
+		ActivationRecord *ar;
+		for (auto a : activationRecordStack)
+		{
+			if (a->varExists(left->getName()))
+				ar = a;
+		}
+
 		if (!left->isArray())
 		{
-			if (activationRecordStack.front()->isRef(lval->getName().str()))
+			if (ar->isRef(left->getName()))
 			{
-				auto *addr = Builder->CreateLoad(activationRecordStack.front()->getAddr(lval->getName().str()));
-				return Builder->CreateStore(rval, addr);
+				auto *addr = Builder.CreateLoad(ar->getAddr(left->getName()));
+				return Builder.CreateStore(rval, addr);
 			}
 			else
 			{
-				return Builder->CreateStore(rval, activationRecordStack.front()->getVal(lval->getName().str()));
+				return Builder.CreateStore(rval, ar->getVal(left->getName()));
 			}
 		}
 		/* Array */
 		else
 		{
-			// std::dynamic_pointer_cast<ArrayIndexing>()
-			// auto *idx = dynamic_cast<ArrayIndexing*>(left)->codegenIndex();
 			llvm::Value *idx = left->getIndex()->codegen();
 			llvm::Value *val;
-			if (activationRecordStack.front()->isRef(lval->getName().str()))
+			if (ar->isRef(left->getName()))
 			{
-				val = Builder->CreateLoad(activationRecordStack.front()->getAddr(lval->getName().str()));
-				val = Builder->CreateGEP(val, idx);
+				val = Builder.CreateLoad(ar->getAddr(left->getName()));
+				val = Builder.CreateGEP(val, idx);
 			}
 			else
 			{
-				val = Builder->CreateGEP(activationRecordStack.front()->getVal(lval->getName().str()), std::vector<llvm::Value *>{c32(0), idx});
+				val = Builder.CreateGEP(ar->getVal(left->getName()), std::vector<llvm::Value *>{c32(0), idx});
 			}
-			return Builder->CreateStore(rval, val);
+			return Builder.CreateStore(rval, val);
 		}
 		return nullptr;
 	}
@@ -1260,7 +1328,7 @@ public:
 	virtual llvm::Value *codegen() override
 	{
 		activationRecordStack.front()->addRet();
-		return Builder->CreateRet(this->returnExpr->codegen());
+		return Builder.CreateRet(this->returnExpr->codegen());
 	}
 
 private:
@@ -1307,9 +1375,9 @@ public:
 		llvm::Value *CondV = cond->codegen();
 
 		// Convert condition to a bool by comparing non-equal to 0.0.
-		CondV = Builder->CreateFCmpONE(CondV, llvm::ConstantFP::get(TheContext, llvm::APFloat(0.0)), "ifcond");
+		CondV = Builder.CreateFCmpONE(CondV, llvm::ConstantFP::get(TheContext, llvm::APFloat(0.0)), "ifcond");
 
-		llvm::Function *TheFunction = Builder->GetInsertBlock()->getParent();
+		llvm::Function *TheFunction = Builder.GetInsertBlock()->getParent();
 
 		// Create blocks for the then and else cases.  Insert the 'then' block at the
 		// end of the function.
@@ -1317,29 +1385,29 @@ public:
 		llvm::BasicBlock *ElseBB = llvm::BasicBlock::Create(TheContext, "else");
 		llvm::BasicBlock *MergeBB = llvm::BasicBlock::Create(TheContext, "ifcont");
 
-		Builder->CreateCondBr(CondV, ThenBB, ElseBB);
+		Builder.CreateCondBr(CondV, ThenBB, ElseBB);
 
 		// Emit then value.
-		Builder->SetInsertPoint(ThenBB);
+		Builder.SetInsertPoint(ThenBB);
 		activationRecordStack.front()->setCurrentBlock(ThenBB);
 
 		stmt_list->codegen();
 		if (!activationRecordStack.front()->hasReturn())
-			Builder->CreateBr(MergeBB);
+			Builder.CreateBr(MergeBB);
 
 		// Emit else block.
 		TheFunction->getBasicBlockList().push_back(ElseBB);
-		Builder->SetInsertPoint(ElseBB);
+		Builder.SetInsertPoint(ElseBB);
 		activationRecordStack.front()->setCurrentBlock(ElseBB);
 
 		if (nextIf != nullptr)
 			nextIf->codegen();
 		if (!activationRecordStack.front()->hasReturn())
-			Builder->CreateBr(MergeBB);
+			Builder.CreateBr(MergeBB);
 
 		// Emit merge block.
 		TheFunction->getBasicBlockList().push_back(MergeBB);
-		Builder->SetInsertPoint(MergeBB);
+		Builder.SetInsertPoint(MergeBB);
 		activationRecordStack.front()->setCurrentBlock(MergeBB);
 
 		return nullptr;
@@ -1375,7 +1443,7 @@ public:
 	{
 		initializers->codegen();
 
-		llvm::Function *TheFunction = Builder->GetInsertBlock()->getParent();
+		llvm::Function *TheFunction = Builder.GetInsertBlock()->getParent();
 		llvm::BasicBlock *LoopBB = llvm::BasicBlock::Create(TheContext, "loop", TheFunction);
 		llvm::BasicBlock *AfterBB = llvm::BasicBlock::Create(TheContext, "after");
 
@@ -1384,12 +1452,12 @@ public:
 			return nullptr;
 
 		// Convert condition to a bool by comparing non-equal to 0.0.
-		CondV = Builder->CreateFCmpONE(CondV, llvm::ConstantFP::get(TheContext, llvm::APFloat(0.0)), "loopcond");
+		CondV = Builder.CreateFCmpONE(CondV, llvm::ConstantFP::get(TheContext, llvm::APFloat(0.0)), "loopcond");
 
-		Builder->CreateCondBr(CondV, LoopBB, AfterBB);
+		Builder.CreateCondBr(CondV, LoopBB, AfterBB);
 
 		// Start insertion in LoopBB.
-		Builder->SetInsertPoint(LoopBB);
+		Builder.SetInsertPoint(LoopBB);
 		activationRecordStack.front()->setCurrentBlock(LoopBB);
 
 		loop_body->codegen();
@@ -1402,14 +1470,14 @@ public:
 			return nullptr;
 
 		// Convert condition to a bool by comparing non-equal to 0.0.
-		CondV = Builder->CreateFCmpONE(CondV, llvm::ConstantFP::get(TheContext, llvm::APFloat(0.0)), "loopcond");
+		CondV = Builder.CreateFCmpONE(CondV, llvm::ConstantFP::get(TheContext, llvm::APFloat(0.0)), "loopcond");
 
 		// Insert the conditional branch into the end of LoopEndBB.
-		Builder->CreateCondBr(CondV, LoopBB, AfterBB);
+		Builder.CreateCondBr(CondV, LoopBB, AfterBB);
 
 		// Any new code will be inserted in AfterBB.
 		TheFunction->getBasicBlockList().push_back(AfterBB);
-		Builder->SetInsertPoint(AfterBB);
+		Builder.SetInsertPoint(AfterBB);
 		activationRecordStack.front()->setCurrentBlock(AfterBB);
 
 		return nullptr;
@@ -1421,3 +1489,51 @@ private:
 	Stmt *steps;
 	StmtList *loop_body;
 };
+
+void codegenLibs()
+{
+	auto *writeIntegerType = llvm::FunctionType::get(proc, std::vector<llvm::Type *>{i32}, false);
+	scopes.addFunc("puti",llvm::Function::Create(writeIntegerType,llvm::Function::ExternalLinkage,"writeInteger", TheModule.get()));
+	
+	auto *writeByteType = llvm::FunctionType::get(proc, std::vector<llvm::Type *>{i8}, false);
+	scopes.addFunc("putb",llvm::Function::Create(writeByteType,llvm::Function::ExternalLinkage,"writeByte", TheModule.get()));
+
+	auto *writeCharType = llvm::FunctionType::get(proc, std::vector<llvm::Type *>{i8}, false);
+	scopes.addFunc("putc",llvm::Function::Create(writeCharType,llvm::Function::ExternalLinkage,"writeChar", TheModule.get()));
+	
+	auto *writeStringType = llvm::FunctionType::get(proc, std::vector<llvm::Type *>{i8->getPointerTo()}, false);
+	scopes.addFunc("puts",llvm::Function::Create(writeStringType,llvm::Function::ExternalLinkage,"writeString", TheModule.get()));
+	
+	auto *readIntegerType = llvm::FunctionType::get(i32, std::vector<llvm::Type *>{}, false);
+	scopes.addFunc("geti",llvm::Function::Create(readIntegerType,llvm::Function::ExternalLinkage,"readInteger", TheModule.get()));
+	
+	auto *readByteType = llvm::FunctionType::get(i8, std::vector<llvm::Type *>{}, false);
+	scopes.addFunc("getb",llvm::Function::Create(readByteType,llvm::Function::ExternalLinkage,"readByte", TheModule.get()));
+
+	auto *readCharType = llvm::FunctionType::get(i8, std::vector<llvm::Type *>{}, false);
+	scopes.addFunc("getc",llvm::Function::Create(readCharType,llvm::Function::ExternalLinkage,"readChar", TheModule.get()));
+
+	auto *readStringType = llvm::FunctionType::get(proc, std::vector<llvm::Type *>{i32, i8->getPointerTo()}, false);
+	scopes.addFunc("gets",llvm::Function::Create(readStringType,llvm::Function::ExternalLinkage,"readString", TheModule.get()));
+
+	auto absType = llvm::FunctionType::get( i32, std::vector<llvm::Type *>{i32}, false );
+	scopes.addFunc("abs", llvm::Function::Create(absType,llvm::Function::ExternalLinkage,"abs", TheModule.get()));
+
+	auto ordType = llvm::FunctionType::get( i32, std::vector<llvm::Type *>{i8}, false );
+	scopes.addFunc("ord", llvm::Function::Create(ordType,llvm::Function::ExternalLinkage,"ord", TheModule.get()));
+
+	auto chrType = llvm::FunctionType::get( i8, std::vector<llvm::Type *>{i32}, false );
+	scopes.addFunc("chr", llvm::Function::Create(chrType,llvm::Function::ExternalLinkage,"chr", TheModule.get()));
+
+	auto *strlenType = llvm::FunctionType::get(i32, std::vector<llvm::Type *>{i8->getPointerTo()}, false);
+	scopes.addFunc("strlen", llvm::Function::Create(strlenType, llvm::Function::ExternalLinkage,"strlen", TheModule.get()));
+
+	auto *strcmpType = llvm::FunctionType::get(i32, std::vector<llvm::Type *>{i8->getPointerTo(), i8->getPointerTo()}, false);
+	scopes.addFunc("strcmp", llvm::Function::Create(strcmpType, llvm::Function::ExternalLinkage,"strcmp", TheModule.get()));
+
+	auto *strcpyType = llvm::FunctionType::get(proc, std::vector<llvm::Type *>{i8->getPointerTo(), i8->getPointerTo()}, false);
+	scopes.addFunc("strcpy", llvm::Function::Create(strcpyType, llvm::Function::ExternalLinkage,"strcpy", TheModule.get()));
+
+	auto *strcatType = llvm::FunctionType::get(proc, std::vector<llvm::Type *>{i8->getPointerTo(), i8->getPointerTo()},false);
+	scopes.addFunc("strcat", llvm::Function::Create(strcatType, llvm::Function::ExternalLinkage, "strcat", TheModule.get()));
+}

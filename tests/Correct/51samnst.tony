@@ -1,0 +1,14 @@
+def samnst ():
+
+   def a1 ():
+      def b (): puti(4) end
+   b() end
+
+   def a2 ():
+      def b (): puti(2) end
+   b() end
+
+   a1()
+   a2()
+   puts("\n")
+end

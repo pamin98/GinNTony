@@ -1,0 +1,47 @@
+def twoprime ():
+
+   def bool is2prime (int primeprime):
+   
+      int num, sqrt, odd, sum, divisor, quotient
+      bool more
+   
+      num := primeprime
+      more := true
+      for skip; more and (num <> 2) and (num > 0); skip:
+         sqrt := 0
+         odd := 1
+         for sum := 1; sum <= num; sum := sum + odd:
+            sqrt := sqrt + 1
+            odd := odd + 2
+         end
+         for divisor := 3; more and (divisor <= sqrt); skip:
+            quotient := num / divisor
+            if num = divisor * quotient:
+               more := false
+            else:
+               divisor := divisor + 2
+            end
+         end
+         num := num / 10
+      end
+      return more
+   end
+   
+   def output (int n):
+      puti(n)
+      puts("\n")
+   end
+   
+   int max2prime, i
+
+   puts("Limit: ")
+   max2prime := geti()
+   for i := 6; i <= max2prime; i := i + 6:
+      if is2prime(i-1):
+         output(i-1)
+      end
+      if (i+1 <= max2prime) and is2prime(i+1):
+         output(i+1)
+      end
+   end
+end

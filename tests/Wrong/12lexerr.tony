@@ -1,0 +1,5 @@
+def main ():
+   bool a
+   a := '\xWW'
+   puts("\nThis program is wrong!\n")
+end

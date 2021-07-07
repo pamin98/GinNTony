@@ -1,0 +1,13 @@
+def main ():
+
+   def narg (int a, b):
+      puti(a+b)
+      puts("\nthis program is wrong!!!\n")
+   end
+
+   int i
+
+   i := 5
+   narg(i)
+   puts("\nthis program is wrong!!!\n")
+end

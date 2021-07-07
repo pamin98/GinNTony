@@ -1,0 +1,6 @@
+def main ():
+   int a, b, a
+   a := 1
+   puti(a)
+   puts("\nthis program is wrong!!!\n")
+end

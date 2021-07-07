@@ -1,0 +1,6 @@
+def main ():
+   int a
+   if a:
+     puts("\nThis program is wrong!\n")
+   end
+end

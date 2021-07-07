@@ -1,0 +1,6 @@
+def ch ():
+   char c
+   c := chr(42)
+   puti(ord(c))
+   putc(chr(10))
+end

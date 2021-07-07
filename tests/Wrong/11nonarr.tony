@@ -1,0 +1,5 @@
+def main ():
+   int a
+   a[5] := a[5]
+   puts("\nThis program is wrong!\n")
+end

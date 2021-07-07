@@ -1,0 +1,36 @@
+def gcd ():
+
+   def int stupid (int a, b):
+      int i
+      if a>b: i:=a else: i:=b end
+
+      for skip; i>1; i := i-1:
+         if (a mod i = 0) and (b mod i = 0):
+            return i
+         end
+      end
+      return 1
+   end
+
+   def int euclid (int a, b):
+      if a = 0:
+         return b
+      else:
+         return euclid(b mod a, a)
+      end
+   end
+
+   def int clever (int a, b):
+      if (a = 0) and (b = 0):
+         return 0
+      elsif a <= b:
+         return euclid(a, b)
+      else:
+         return euclid(b, a)
+      end
+   end
+
+   puti(stupid(100, 932))
+   puti(clever(288, 118))
+   putc(chr(clever(26910, 3130)))
+end

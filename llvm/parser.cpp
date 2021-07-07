@@ -1711,7 +1711,7 @@ yyreduce:
     {
   case 2: /* program: func_def  */
 #line 124 "parser.y"
-                                                                        { (yyvsp[0].func_def)->sem(); /*$1->codegen()*/ }
+                                                                        { (yyvsp[0].func_def)->sem(); (yyvsp[0].func_def)->llvm_compiler_and_dump(); }
 #line 1716 "parser.cpp"
     break;
 
@@ -2413,14 +2413,10 @@ yyreturn:
 
 int main()
 {
-	printf("Hello Starting");
 	initSymbolTable(ST_SIZE);
-	printf("HELLO INITIATED");
 	openScope();
-	printf("HELLO OPENED SCOPE");
-	printf("HELLO YYPARSING\n");
+	printf("Starting Parsing\n");
 	int result = yyparse();
-	printf("FINISHED YYPARSING\n");
 	destroySymbolTable();
 	return result;
 }

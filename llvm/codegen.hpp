@@ -16,7 +16,8 @@
 
 class ActivationRecord;
 
-class ActivationRecord {
+class ActivationRecord 
+{
     private :
         llvm::Function   *func;
         std::vector<llvm::Type*>                            args;
@@ -25,6 +26,7 @@ class ActivationRecord {
         std::unordered_map<std::string, llvm::AllocaInst*>  addresses;
         llvm::BasicBlock                                    *currentBB;
         bool                                                hasRet;
+        // deikti pros frame pointer
     public :
         ActivationRecord();
         ~ActivationRecord();
@@ -37,6 +39,7 @@ class ActivationRecord {
         void addVal(std::string name, llvm::AllocaInst *val);
         void addAddr(std::string name, llvm::AllocaInst *addr);
         void addRet();
+        bool varExists(std::string name);
 
         const std::vector<llvm::Type*>& getArgs() const;
         llvm::Type* getVar(std::string name);
@@ -58,6 +61,7 @@ class LLVMScope {
 
         void openScope();
         void closeScope();
+        bool empty();
         void addFunc(std::string id, llvm::Function *func);
         llvm::Function* getFunc(std::string id);
 };

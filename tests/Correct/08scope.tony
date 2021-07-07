@@ -1,0 +1,16 @@
+def scope ():
+
+   int x, y
+
+   def test ():
+      int y
+      y := 2
+      puti(x)
+      puti(y)
+      puts("\n")
+   end
+      
+   x := 4
+   y := 9
+   test()
+end

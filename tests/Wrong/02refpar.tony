@@ -1,0 +1,11 @@
+def main ():
+
+   def aaa (ref int a):
+      puti(a)
+   end
+
+   int i
+
+   i := 3
+   aaa(i+5)
+end

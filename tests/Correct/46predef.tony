@@ -1,0 +1,16 @@
+def predef ():
+
+   def newline ():
+      puts("\n")
+   end
+   
+   def puts (int i):
+      puti(i)
+   end
+   
+   int puti
+
+   puti := 42
+   puts(puti)
+   newline()
+end

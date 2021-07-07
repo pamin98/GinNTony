@@ -1,0 +1,14 @@
+def comp ():
+
+   def correct ():
+      puts("\n---\n")
+      puts("236710\n")
+   end
+
+   if not (3 > 2): puti(1) else: puti(2) end
+   if not not (3 > 2): puti(3) else: puti(4) end
+   if not (3 < 7): puti(5) else: puti(6) end
+   if not ((3 > 2) and (3 < 2)): puti(7) else: puti(8) end
+   if (3 < 2) and (3 > 2) and (3 < 2): puti(9) else: puti(10) end
+   correct ()
+end

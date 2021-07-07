@@ -1,0 +1,13 @@
+def main ():
+  if 1 = 1:
+    if 2 = 2:
+      if 3 = 3:
+        puts("42\n")
+      else:
+        puts("wrong 1!!!\n")
+      end
+    else:
+      puts("wrong 2!!!\n")
+    end
+  end
+end

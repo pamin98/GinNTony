@@ -1,0 +1,23 @@
+def divis ():
+   int n, lcv
+   bool flag
+   puts("Number to find the divisors of: ")
+   n := geti()
+   flag := true
+   for lcv := 2; lcv <= n / 2; lcv := lcv + 1:
+      if n mod lcv = 0:
+         if flag:
+            puts("The non-trivial divisors of ")
+            puti(n)
+            puts(" are: \n")
+         end
+         flag := false
+         puti(lcv)
+         putc('\n')
+      end      
+   end
+   if flag:
+      puti(n)
+      puts(" is prime\n")
+   end
+end

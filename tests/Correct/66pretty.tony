@@ -1,0 +1,56 @@
+<* prettyStyle created by Clark *>
+
+def prettyStyle ():
+
+   def int length (char[] s):
+      int i
+      for i := 0; s[i] <> '\0'; skip:
+         i := i + 1
+      end
+      return i
+   end
+
+	<* function starLine
+	-- prints a row of 'ch' characters 'size' times.
+	*>
+	def starLine (char ch; int size):
+		int i
+		for i := 0; i < size; i := i + 1: putc(ch) end
+	end
+
+	<* function starChar
+	-- prints a 'phrase' with 'ch' between each two consequent
+	-- characters.
+	*>
+	def starChar (char[] phrase; char ch; int size):
+		int i
+		for i := 0; i < size; i := i + 1:
+			putc(ch)          putc(' ')
+			putc(phrase[i])   putc(' ')
+		end
+		putc(ch)
+	end
+
+<* function starStyle
+-- prints a phrase really nice.
+*>
+
+	int size
+	char[] sym
+
+        sym := new char[20]
+	puts("Give me a word: ")
+	gets(20, sym)
+	size := length(sym)
+
+	puts("Let\'s print this nice...\n\n")
+	starLine('*', 4 * size + 1)    putc('\n')
+	starChar(sym, '*', size)       putc('\n')
+	starLine('*', 4 * size + 1)    putc('\n')
+
+	putc('\n')
+
+	starLine('#', 4 * size + 1)    putc('\n')
+	starChar(sym, '-', size)       putc('\n')
+	starLine('#', 4 * size + 1)    putc('\n')
+end

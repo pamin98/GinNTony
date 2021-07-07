@@ -1,0 +1,43 @@
+def char2 ():
+
+   def swapString (char[] source, dest):
+
+      def int length (char[] s):
+         int i
+         for i := 0; s[i] <> '\0'; skip:
+            i := i+1
+         end
+         return i
+      end
+
+      def swap (ref char x, y):
+         char z
+         z := x
+         x := y
+         y := z
+      end
+      
+      int i
+      
+      for i := 0; i <= length(source); i := i+1:
+         dest[i] := source[i]
+      end
+      for i := 0; i < length(dest) / 2; i := i+1:
+         swap(dest[i], dest[length(dest) - i - 1])
+      end
+   end
+
+   char[] a, b
+   a := new char[42]
+   b := new char[42]
+
+   swapString("Hello world!", a)
+   puts("Original String    : Hello world!\n")
+   puts("Reverse String     : ")
+   puts(a)
+   puts("\n")
+   swapString(a, b)
+   puts("Back from the dead : ")
+   puts(b)
+   puts("\n")
+end

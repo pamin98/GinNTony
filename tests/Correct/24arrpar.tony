@@ -1,0 +1,18 @@
+def main ():
+
+   def reverse (char[] s, r; char c):
+      if true:
+        putc(c)
+      elsif false:
+        putc(s[0])
+      else:
+        putc(r[0])
+      end
+   end
+
+   char[] p, s
+
+   reverse(s, p, '4')
+   reverse("Hello", p, '2')
+   reverse(p, "Hello", '\n')
+end

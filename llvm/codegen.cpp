@@ -1,17 +1,4 @@
-/*******************************************************************************
- *                                                                             *
- *  Filename    : codegen.cpp                                                  *
- *  Project     : Alan Compiler                                                *
- *  Version     : 1.0                                                          *
- *  Author      : Spiros Dontas                                                *
- *  Email       : spirosdontas@gmail.com                                       *
- *                                                                             *
- *  Description : Codegen source file (llvm stuff)                             *
- *                                                                             *
- *******************************************************************************/
-
 #include "codegen.hpp"
-// #include <message/message.hpp>
 #include <memory>
 
 #include <llvm/IR/Instructions.h>
@@ -86,12 +73,19 @@ llvm::AllocaInst* ActivationRecord::getAddr(std::string name) {
     return this->addresses[name];
 }
 
-bool ActivationRecord::isRef(std::string name) {
+bool ActivationRecord::isRef(std::string name) 
+{   
+    std::cout << this->varTypes[name] << std::endl ;
     return this->varTypes[name]->isPointerTy();
 }
 
 bool ActivationRecord::hasReturn() {
     return this->hasRet;
+}
+
+bool ActivationRecord::varExists(std::string name)
+{
+    return (this->varTypes.find(name) != this->varTypes.end());
 }
 
 llvm::Function* ActivationRecord::getFunc() {
@@ -106,12 +100,17 @@ llvm::BasicBlock* ActivationRecord::getCurrentBlock() {
  * Scope
  *******************************************************************************/
 
-LLVMScope::LLVMScope() {  }
+LLVMScope::LLVMScope() {}
 
-LLVMScope::~LLVMScope() {  }
+LLVMScope::~LLVMScope() {}
 
 void LLVMScope::openScope() {
-    this->functions.push_front(FuncMap());
+    this->functions.push_front( FuncMap() );
+}
+
+bool LLVMScope::empty()
+{
+    return this->functions.empty();
 }
 
 void LLVMScope::closeScope() {
@@ -127,7 +126,8 @@ void LLVMScope::addFunc(std::string id, llvm::Function *func) {
 }
 
 llvm::Function* LLVMScope::getFunc(std::string id) {
-    for (auto funcs : this->functions) {
+    for ( auto funcs : this->functions ) 
+    {
         if (funcs.find(id) != funcs.end())
             return funcs[id];
     }

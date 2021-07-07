@@ -1,0 +1,61 @@
+def main ():
+
+   def qsort (int n; int[] a):
+
+      def qsort_auxil (int lower, upper):
+
+	 def swap (ref int a, b):
+	    int t
+	    t := a
+	    a := b
+	    b := t
+	 end
+
+         int x, i, j
+         
+         if lower < upper:
+            x := a[(lower + upper) / 2]
+            i := lower
+            j := upper
+            for skip; i <= j; skip:
+               for skip; a[i] < x; skip: i := i+1 end
+               for skip; a[j] > x; skip: j := j-1 end
+               if i <= j:
+	          swap(a[i], a[j])
+                  i := i+1
+                  j := j-1
+	       end
+            end
+	    qsort_auxil(lower, j)
+	    qsort_auxil(i, upper)
+         end
+      end
+
+      qsort_auxil(0, n-1)
+   end
+
+   def writeArray (char[] msg; int n; int[] x):
+      int i
+      puts(msg)
+      for i := 0; i < n; i := i+1:
+         if i > 0: puts(", ") end
+         puti(x[i])
+      end
+      puts("\n")
+   end
+
+   int seed, i
+   int[] x
+
+   x := new int[16]
+
+   puts("Seed :\t")
+   seed := geti()
+   for i := 0; i < 16; i := i+1:
+      seed := (seed * 137 + 220 + i) mod 101
+      x[i] := seed
+   end
+   writeArray("Initial array; ", 16, x)
+   qsort(16, x)
+   writeArray("Sorted array: ", 16, x)
+end

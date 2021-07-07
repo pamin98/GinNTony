@@ -1,0 +1,15 @@
+def over ():
+
+   def f ():
+      puts("wrong!!!\n")
+   end
+
+   def g ():
+      def f ():
+         puts("42\n")
+      end
+      f()
+   end
+
+   g()
+end

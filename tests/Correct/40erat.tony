@@ -1,0 +1,27 @@
+def erat ():
+
+   int count, i, n
+   bool[] mark
+
+   mark := new bool[1001]
+
+   count := 0
+   
+   for i := 0; i <= 1000; i := i+1:
+      mark[i] := true
+   end
+
+   for n:=2; n <= 1000; n:=n+1:
+      if mark[n]:
+         count := count+1
+         puti(n)
+         puts("\t")
+         for i:=n; i <= 1000; i := i+n:
+            mark[i] := false
+         end
+      end
+   end
+   puts("\n\n")
+   puti(count)
+   puts(" prime number(s) found\n")
+end

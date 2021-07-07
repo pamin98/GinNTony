@@ -1,0 +1,9 @@
+def main ():
+   def g ():
+      def int f (int x): return x+1 end
+      def int f (int x): return x+2 end
+     puti(f(3))
+   end
+
+   puts("\nthis program is wrong!!!\n")
+end

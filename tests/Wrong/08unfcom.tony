@@ -1,0 +1,9 @@
+def main ():
+   int i
+   i := 5
+   puti(i)
+   puts("\nthis program is wrong!\n")
+
+<*
+where did that comment go?
+

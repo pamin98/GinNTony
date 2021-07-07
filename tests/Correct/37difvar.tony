@@ -1,0 +1,28 @@
+def difvars ():
+
+   int a, b
+
+   def p1 ():
+      int b, x, y
+      x:=9991
+      y:=9992
+      a:=4
+      b:=9993
+   end
+
+   def p2 ():
+      int a, x, y
+      x:=9994
+      y:=9995
+      a:=9996
+      b:=2
+   end
+
+   a:=7
+   b:=8
+   p1()
+   p2()
+   puti(a)
+   puti(b)
+   puts("\n")
+end

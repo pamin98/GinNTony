@@ -1,0 +1,27 @@
+def cond ():
+   bool a
+   int x, y, sum
+   x   := 10
+   y   := 0
+   a   := true
+   sum := 0
+
+   for skip; a; skip:
+      if a and (x>=y):
+         sum := sum + x * y
+         x := x-1
+      elsif true:
+         if y<=10:
+            x := 10
+         elsif not false:
+            a := false
+         end
+         y := y + 1
+      end
+   end
+   if sum = 1705:
+      puts("42\n")
+   else:
+      puts("wrong!!!\n")
+   end
+end

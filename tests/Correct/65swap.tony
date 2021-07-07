@@ -1,0 +1,18 @@
+def sw ():
+
+   def swap (ref int a, b):
+      int t
+      t := a
+      a := b
+      b := t
+   end
+
+   int x, y
+
+   x := 2
+   y := 4
+   swap(x, y)
+   puti(x)
+   puti(y)
+   puts("\n")
+end
