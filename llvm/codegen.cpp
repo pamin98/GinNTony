@@ -75,7 +75,6 @@ llvm::AllocaInst* ActivationRecord::getAddr(std::string name) {
 
 bool ActivationRecord::isRef(std::string name) 
 {   
-    std::cout << this->varTypes[name] << std::endl ;
     return this->varTypes[name]->isPointerTy();
 }
 

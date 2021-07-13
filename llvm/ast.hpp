@@ -11,6 +11,11 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/Bitcode/BitcodeWriter.h"
+#include "llvm/Support/FileSystem.h"
+
+
+
 
 #include "llvm/IR/LegacyPassManager.h"
 
@@ -20,12 +25,19 @@
 #include <string>
 #include <string.h>
 #include <algorithm>
+#include <typeinfo>
+
 #include "symbol.hpp"
 #include "error.hpp"
 #include "codegen.hpp"
 
+
 #include <memory>
 #include <deque>
+
+#include <iostream>
+#include <ctime>
+#include <unistd.h>
 
 // using namespace llvm;
 
@@ -73,6 +85,7 @@ static std::unique_ptr<llvm::legacy::FunctionPassManager> TheFPM;
 
 static llvm::Type *i32 = llvm::Type::getInt32Ty(TheContext);
 static llvm::Type *i8 = llvm::Type::getInt8Ty(TheContext);
+static llvm::Type *i1 = llvm::Type::getInt1Ty(TheContext);
 static llvm::Type *proc = llvm::Type::getVoidTy(TheContext);
 
 static inline llvm::Constant *c32(int n)
@@ -85,8 +98,33 @@ static inline llvm::Constant *c8(unsigned char b)
 	return llvm::ConstantInt::get(i8, b);
 }
 
+static inline llvm::Constant *c1(int n)
+{
+	return llvm::ConstantInt::get(i1,n);
+}
+
 static std::deque<ActivationRecord *> activationRecordStack;
 static LLVMScope scopes;
+
+static inline std::string gen_random(const int len) {
+    
+    std::string tmp_s;
+    static const char alphanum[] =
+        "0123456789"
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        "abcdefghijklmnopqrstuvwxyz";
+    
+    srand( (unsigned) time(NULL) * getpid());
+
+    tmp_s.reserve(len);
+
+    for (int i = 0; i < len; ++i) 
+        tmp_s += alphanum[rand() % (sizeof(alphanum) - 1)];
+    
+    
+    return tmp_s;
+    
+}
 
 // TODO REFERENCES
 inline llvm::Type *translateType(Type type, PassMode mode = PASS_BY_VALUE)
@@ -97,7 +135,17 @@ inline llvm::Type *translateType(Type type, PassMode mode = PASS_BY_VALUE)
 	case TYPE_INTEGER:
 	{
 		ret = llvm::Type::getInt32Ty(TheContext);
-		ret->isPointerTy();
+		// ret->isPointerTy();
+		break;
+	}
+	case TYPE_BOOLEAN:
+	{
+		ret = llvm::Type::getInt1Ty(TheContext);
+		break;
+	}
+	case TYPE_CHAR:
+	{
+		ret = llvm::Type::getInt8Ty(TheContext);
 		break;
 	}
 	case TYPE_VOID:
@@ -116,7 +164,15 @@ inline llvm::Type *translateType(Type type, PassMode mode = PASS_BY_VALUE)
 	}
 	case TYPE_IARRAY:
 	{
-		ret = llvm::ArrayType::get(translateType(type->refType), type->size);
+		if( type->size == 0 )
+		{
+			ret = translateType( type->refType );
+		}
+		else
+		{
+			ret = llvm::ArrayType::get(translateType(type->refType), type->size);
+		}
+		
 		break;
 	}
 	default:
@@ -147,16 +203,45 @@ public:
 
 		codegenLibs();
 
-		llvm::FunctionType *main_type = llvm::FunctionType::get(i32, {}, false);
-		llvm::Function *main =
-			llvm::Function::Create(main_type, llvm::Function::ExternalLinkage,
-								   "main", TheModule.get());
-		llvm::BasicBlock *BB = llvm::BasicBlock::Create(TheContext, "entry", main);
-		Builder.SetInsertPoint(BB);
+		// llvm::FunctionType *main_type = llvm::FunctionType::get(i32, {}, false);
+		// llvm::Function *main = llvm::Function::Create(main_type, llvm::Function::ExternalLinkage,"main", TheModule.get());
+		// llvm::BasicBlock *BB = llvm::BasicBlock::Create(TheContext, "entry", main);
+		// Builder.SetInsertPoint(BB);
 		this->codegen();
-		Builder.CreateRet(c32(0));
-		TheFPM->run(*main);
-		TheModule->print(llvm::outs(), nullptr);
+		// Builder.CreateRet(c32(0));
+		// TheFPM->run(*main);
+
+		bool bad = llvm::verifyModule(*TheModule, &llvm::errs());
+		if (bad) 
+		{
+			std::cerr << std::endl << std::endl << "The IR is bad!" << std::endl;
+			TheModule->print(llvm::errs(), nullptr);
+			// llvm::file
+			exit(1);
+		}
+		else
+		{
+			// TheFPM->run(*main);
+			// llvm::
+			TheModule->print(llvm::outs(), nullptr);
+			std::error_code EC;
+			llvm::raw_fd_ostream OS("./module.ll", EC, llvm::sys::fs::F_None);
+			llvm::WriteBitcodeToFile(*TheModule, OS);
+			OS.flush();
+		}
+		// // Optimize!
+		// TheFPM->run(*main);
+		// // Print out the IR.
+		// llvm:WriteBitcodeToFile()
+		// TheModule->print(llvm::outs(), nullptr);
+		// // void llvm::WriteBitcodeToFile(const Module *M, raw_ostream &Out);
+		// // llvm::WriteBitcodeToFile(TheModule, )
+
+		// // std::error_code EC;
+		// // llvm::raw_fd_ostream OS("module", EC, llvm::sys::fs::F_None);
+		// // llvm::WriteBitcodeToFile(TheModule, OS);
+		// // OS.flush();
+		// // llvm::WriteBitCodeToFile
 	}
 };
 
@@ -231,19 +316,6 @@ class Var : public Expr
 public:
 	Var(const char *v, Expr *i = NULL) : var(v), index(i) {}
 
-
-
-// 	virtual void sem() override
-// 	{
-// 		if (index->getType()->dtype != TYPE_INTEGER)
-// 			error("Array index must be of type integer.");
-// 		if (array->getType()->dtype != TYPE_IARRAY)
-// 			error("Expected array, found %s", TypeToStr(array->getType()));
-
-// 		type = array->getType()->refType;
-// 	}
-
-
 	virtual void sem() override
 	{
 		SymbolEntry *e = lookupEntry(var, LOOKUP_ALL_SCOPES, true);
@@ -279,22 +351,74 @@ public:
 
 	virtual llvm::Value *codegen() override
 	{
-
 		ActivationRecord *ar;
-		for (auto a : activationRecordStack)
-		{
-			if (a->varExists(var))
-				ar = a;
-		}
-		if (ar->isRef(var))
-		{
-			auto *addr = Builder.CreateLoad(ar->getAddr(var));
-			return Builder.CreateLoad(addr);
-		}
-		else
-			return Builder.CreateLoad(ar->getVal(var));
 
-		return nullptr;
+		for(auto a : activationRecordStack)
+		{
+			if( a->varExists(var) )
+			{
+				ar = a;
+				break;
+			}
+		}
+		if( index == NULL )
+		{
+			if (ar->isRef(var))
+			{
+				auto *addr = Builder.CreateLoad(ar->getAddr(var));
+				return Builder.CreateLoad(addr);
+			}
+			else
+				return Builder.CreateLoad(ar->getVal(var));
+			return nullptr;
+		}
+		else 
+		{
+			auto *idx = this->index->codegen();
+			if (ar->isRef(this->var)) {
+				auto *ptr = Builder.CreateLoad(ar->getAddr(this->var));
+				auto *addr = Builder.CreateGEP(ptr, idx);
+				return Builder.CreateLoad(addr);
+			} 
+			else 
+			{
+				return Builder.CreateLoad(
+									Builder.CreateGEP(ar->getVal(this->var),
+									std::vector<llvm::Value *>{c32(0), idx})
+								);
+			}
+    	}
+    	/* Fail */
+    	return nullptr;
+		// if( index == NULL )
+		// {
+		// 	if (activationRecordStack.front()->isRef(var))
+		// 	{
+		// 		auto *addr = Builder.CreateLoad(activationRecordStack.front()->getAddr(var));
+		// 		return Builder.CreateLoad(addr);
+		// 	}
+		// 	else
+		// 		return Builder.CreateLoad(activationRecordStack.front()->getVal(var));
+		// 	return nullptr;
+		// }
+		// else 
+		// {
+		// 	auto *idx = this->index->codegen();
+		// 	if (activationRecordStack.front()->isRef(this->var)) {
+		// 		auto *ptr = Builder.CreateLoad(activationRecordStack.front()->getAddr(this->var));
+		// 		auto *addr = Builder.CreateGEP(ptr, idx);
+		// 		return Builder.CreateLoad(addr);
+		// 	} 
+		// 	else 
+		// 	{
+		// 		return Builder.CreateLoad(
+		// 							Builder.CreateGEP(activationRecordStack.front()->getVal(this->var),
+		// 							std::vector<llvm::Value *>{c32(0), idx})
+		// 						);
+		// 	}
+    	// }
+    	// /* Fail */
+    	// return nullptr;
 	}
 
 private:
@@ -323,7 +447,7 @@ class Formal : public AST
 public:
 	Formal(Type t, VarList *v, bool isRef = false) : type(t), var_list(v)
 	{
-		if (isRef)
+		if (isRef || t->dtype == TYPE_IARRAY )
 			mode = PASS_BY_REFERENCE;
 		else
 			mode = PASS_BY_VALUE;
@@ -511,9 +635,13 @@ public:
 
 	virtual llvm::Value *codegen() override
 	{
-		auto newBlock = new ActivationRecord();
-		activationRecordStack.push_front(newBlock);
+		auto newAR = new ActivationRecord();
+		activationRecordStack.push_front(newAR);
+
 		header->getFormalList()->codegen();
+
+		//check for new function for any variables not defined or not from argument
+		// and create a struct as argument 0 for it
 
 		if (scopes.getFunc(header->getName()) == NULL)
 		{
@@ -544,7 +672,7 @@ public:
 		activationRecordStack.front()->setCurrentBlock(FuncBB);
 		for (auto &Arg : func->args())
 		{
-			auto *alloca = Builder.CreateAlloca(Arg.getType(), nullptr, Arg.getName().str());
+			auto *alloca = Builder.CreateAlloca(Arg.getType(), nullptr, Arg.getName());
 			if (Arg.getType()->isPointerTy())
 				activationRecordStack.front()->addAddr(Arg.getName().str(), alloca);
 			else
@@ -570,6 +698,7 @@ public:
 
 		activationRecordStack.pop_front();
 		scopes.closeScope();
+
 
 		if (activationRecordStack.size() != 0)
 			Builder.SetInsertPoint(activationRecordStack.front()->getCurrentBlock());
@@ -643,8 +772,11 @@ public:
 	{
 		for (const char *varName : var_list->getList())
 		{
+			std::string fml = gen_random(10);
 			auto llvm_type = translateType(this->type);
 			auto alloca = Builder.CreateAlloca(llvm_type, nullptr, varName);
+
+
 
 			activationRecordStack.front()->addVar(varName, type);
 			activationRecordStack.front()->addVal(varName, alloca);
@@ -690,6 +822,25 @@ public:
 
 	virtual void sem() override
 	{
+		if( strcmp(functionName,"geti") == 0 )
+			this->type = new Type_tag{ TYPE_INTEGER, 0 , 0 , 0 };
+		else if( strcmp(functionName,"getb") == 0 )
+			this->type = new Type_tag{ TYPE_BOOLEAN, 0 , 0 , 0 };
+		else if( strcmp(functionName,"getc") == 0 )
+			this->type = new Type_tag{ TYPE_CHAR, 0 , 0 , 0 };
+		else if( strcmp(functionName,"gets") == 0 )
+			this->type = new Type_tag{ TYPE_IARRAY, new Type_tag{TYPE_CHAR,0,0,0} , 0 , 0 };
+		else if( strcmp(functionName,"abs") == 0 )
+			this->type = new Type_tag{ TYPE_INTEGER, 0 , 0 , 0 };
+		else if( strcmp(functionName,"ord") == 0 )
+			this->type = new Type_tag{ TYPE_INTEGER, 0 , 0 , 0 };
+		else if( strcmp(functionName,"chr") == 0 )
+			this->type = new Type_tag{ TYPE_CHAR, 0 , 0 , 0 };
+		else if( strcmp(functionName,"strlen") == 0 )
+			this->type = new Type_tag{ TYPE_INTEGER, 0 , 0 , 0 };
+		else if( strcmp(functionName,"strcmp") == 0 )
+			this->type = new Type_tag{ TYPE_INTEGER, 0 , 0 , 0 };
+
 		if( strcmp(functionName,"puti") == 0 || strcmp(functionName,"putb") == 0 || strcmp(functionName,"putc") == 0 || strcmp(functionName,"puts") == 0 )
 		{
 			return;
@@ -863,7 +1014,8 @@ public:
 
 	virtual llvm::Value *codegen() override
 	{
-		return llvm::ConstantInt::get(i32, num);
+		return llvm::ConstantInt::get(llvm::Type::getInt32Ty(TheContext), num);
+		// return llvm::ConstantInt::get(i32, num);
 	}
 
 private:
@@ -913,6 +1065,7 @@ public:
 		llvm::Value *r = right->codegen();
 		if (left != NULL)
 			l = left->codegen();
+
 		switch (op)
 		{
 		case '+':
@@ -968,6 +1121,7 @@ public:
 	{
 		llvm::Value *l = left->codegen();
 		llvm::Value *r = right->codegen();
+
 		switch (op)
 		{
 		case eq:
@@ -1285,7 +1439,10 @@ public:
 			}
 			else
 			{
-				val = Builder.CreateGEP(ar->getVal(left->getName()), std::vector<llvm::Value *>{c32(0), idx});
+				// val = Builder.CreateLoad(ar->getVal(left->getName()));
+				// val = Builder.CreateGEP(val, std::vector<llvm::Value *>{c32(0), idx});
+			
+				val = Builder.CreateGEP(ar->getVal(left->getName()), idx);
 			}
 			return Builder.CreateStore(rval, val);
 		}
@@ -1375,7 +1532,8 @@ public:
 		llvm::Value *CondV = cond->codegen();
 
 		// Convert condition to a bool by comparing non-equal to 0.0.
-		CondV = Builder.CreateFCmpONE(CondV, llvm::ConstantFP::get(TheContext, llvm::APFloat(0.0)), "ifcond");
+		CondV = Builder.CreateICmpNE(CondV, c1(0), "if_cond");
+		// CondV = Builder.CreateFCmpONE(CondV, llvm::ConstantInt::get(TheContext, llvm::APFloat(0.0)), "ifcond");
 
 		llvm::Function *TheFunction = Builder.GetInsertBlock()->getParent();
 
@@ -1451,8 +1609,8 @@ public:
 		if (!CondV)
 			return nullptr;
 
-		// Convert condition to a bool by comparing non-equal to 0.0.
-		CondV = Builder.CreateFCmpONE(CondV, llvm::ConstantFP::get(TheContext, llvm::APFloat(0.0)), "loopcond");
+		// Convert condition to a bool by comparing non-equal to 0
+		CondV = Builder.CreateICmpNE(CondV, c1(0), "loopcond");
 
 		Builder.CreateCondBr(CondV, LoopBB, AfterBB);
 
@@ -1470,7 +1628,7 @@ public:
 			return nullptr;
 
 		// Convert condition to a bool by comparing non-equal to 0.0.
-		CondV = Builder.CreateFCmpONE(CondV, llvm::ConstantFP::get(TheContext, llvm::APFloat(0.0)), "loopcond");
+		CondV = Builder.CreateICmpNE(CondV, c1(0), "loopcond");
 
 		// Insert the conditional branch into the end of LoopEndBB.
 		Builder.CreateCondBr(CondV, LoopBB, AfterBB);
