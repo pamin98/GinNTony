@@ -21,9 +21,10 @@ class ActivationRecord
     private :
         llvm::Function   *func;
         std::vector<llvm::Type*>                            args;
+        std::vector<std::string>                            argNames;
         std::unordered_map<std::string, llvm::Type*>        varTypes;
-        std::unordered_map<std::string, llvm::Value*>  varValues;
-        std::unordered_map<std::string, llvm::Value*>  addresses;
+        std::unordered_map<std::string, llvm::Value*>       varValues;
+        std::unordered_map<std::string, llvm::Value*>       addresses;
         llvm::BasicBlock                                    *currentBB;
         bool                                                hasRet;
         // deikti pros frame pointer
@@ -42,6 +43,7 @@ class ActivationRecord
         bool varExists(std::string name);
 
         const std::vector<llvm::Type*>& getArgs() const;
+        const std::vector<std::string>& getArgNames() const;
         llvm::Type* getVar(std::string name);
         llvm::Value* getVal(std::string name);
         llvm::Value* getAddr(std::string name);

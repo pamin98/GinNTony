@@ -11,10 +11,10 @@
 /*******************************************************************************
  * ActivationRecord
  *******************************************************************************/
-typedef std::unordered_map<std::string, llvm::Value*> ValTable;
-typedef std::unordered_map<std::string, llvm::Function*> FuncMap;
-typedef std::vector<llvm::Type*> TypeVec;
-typedef std::unordered_map<std::string, llvm::Type*> TypeTable;
+// typedef std::unordered_map<std::string, llvm::Value*> ValTable;
+// typedef std::unordered_map<std::string, llvm::Function*> FuncMap;
+// typedef std::vector<llvm::Type*> TypeVec;
+// typedef std::unordered_map<std::string, llvm::Type*> TypeTable;
 
 
 ActivationRecord::ActivationRecord() {
@@ -57,8 +57,12 @@ void ActivationRecord::addRet() {
     this->hasRet = true;
 }
 
-const TypeVec& ActivationRecord::getArgs() const {
+const std::vector<llvm::Type*>& ActivationRecord::getArgs() const {
     return this->args;
+}
+
+const std::vector<std::string>& ActivationRecord::getArgNames() const {
+    return this->argNames;
 }
 
 llvm::Type* ActivationRecord::getVar(std::string name) {
@@ -104,7 +108,7 @@ LLVMScope::LLVMScope() {}
 LLVMScope::~LLVMScope() {}
 
 void LLVMScope::openScope() {
-    this->functions.push_front( FuncMap() );
+    this->functions.push_front( std::unordered_map<std::string, llvm::Function*>() );
 }
 
 bool LLVMScope::empty()

@@ -233,7 +233,7 @@ public:
 		TheFPM->add(llvm::createReassociatePass());
 		TheFPM->add(llvm::createGVNPass());
 		TheFPM->add(llvm::createCFGSimplificationPass());
-		TheFPM->add(llvm::createConstantPropagationPass());
+		// TheFPM->add(llvm::createConstantPropagationPass());
 		TheFPM->add(llvm::createDeadCodeEliminationPass());
 		
 
@@ -367,16 +367,17 @@ public:
 
 	virtual llvm::Value *codegen() override
 	{
-		ActivationRecord *ar;
+		ActivationRecord *ar = activationRecordStack.front();
 
-		for(auto a : activationRecordStack)
-		{
-			if( a->varExists(var) )
-			{
-				ar = a;
-				break;
-			}
-		}
+		// for(auto a : activationRecordStack)
+		// {
+		// 	if( a->varExists(var) )
+		// 	{
+		// 		ar = a;
+		// 		break;
+		// 	}
+		// }
+
 		if( index == NULL )
 		{
 			if (ar->isRef(var))
@@ -645,9 +646,9 @@ public:
 		this->f = func;
 
 		int index = 0;
-		auto var_list = this->header->getFormalList()->get_arg_names();
+		auto argNames = newAR->getArgNames();
 		for (auto &Arg : func->args())
-			Arg.setName(var_list[index++]);
+			Arg.setName( argNames[index++] );
 		
 
 		llvm::BasicBlock *FuncBB = llvm::BasicBlock::Create(TheContext, "entry", func);
@@ -815,8 +816,6 @@ public:
 	virtual llvm::Value *codegen() override
 	{
 		return Builder.CreateGlobalStringPtr(str);
-		// return Builder.CreateGlobalStringPtr(s, "_string",0);
-		// return Builder.CreateGlobalStringPtr(llvm::StringRef(this->str), "_string", );
 	}
 
 private:
