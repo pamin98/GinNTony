@@ -9,10 +9,17 @@
 #include "lexer.hpp"
 #include "symbol.hpp"
 
+#define YYDEBUG 1
+
+extern FILE *yyin;
+
 
 // ST_SIZE must be a prime number
 #define 	ST_SIZE 	257
 %}
+
+
+
 %locations
 %code requires 
 { 
@@ -121,7 +128,7 @@
 %%
 
 program:		
-		func_def						{ $1->sem(); $1->llvm_compiler_and_dump(); }
+		func_def						{ $1->sem(); $1->llvm_compile_and_dump(); }
 		;
 
 func_def:
@@ -174,7 +181,6 @@ var_list:
 		|	var_list ',' T_var			{ $1->append($3); $$ = $1; }
 	; 
 
-// TODO add primitive data type
 type:
 		  "int"							{ $$ = typeInteger; }
 		| "bool"						{ $$ = typeBoolean; }
@@ -273,12 +279,16 @@ expr:
 
 %%
 
-int main()
+// const char * filename;
+
+int main(int argc, char *argv[])
 {
+	// yydebug = 1;
+	yyin = fopen(argv[1],"r");
 	initSymbolTable(ST_SIZE);
 	openScope();
-	printf("Starting Parsing\n");
 	int result = yyparse();
 	destroySymbolTable();
+	fclose(yyin);
 	return result;
 }

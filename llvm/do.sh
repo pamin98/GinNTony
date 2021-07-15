@@ -1,5 +1,5 @@
 #!/bin/bash
-
-./minibasic < $1 > a.ll
-llc a.ll -o a.s
-clang -o a.out a.s libminibasic.a -lgc
+./GinNTony $1
+llc module.imm -o module.asm
+clang -o module.out module.asm lib.a -lgc
+# ./module.out

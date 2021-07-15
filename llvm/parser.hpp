@@ -45,7 +45,7 @@
 extern int yydebug;
 #endif
 /* "%code requires" blocks.  */
-#line 18 "parser.y"
+#line 25 "parser.y"
  
 	extern int yylineno;
 	#include "ast.hpp" 	
@@ -106,7 +106,7 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 26 "parser.y"
+#line 33 "parser.y"
 
 	FunctionDefinition 			*func_def;
 	FunctionDeclaration 		*func_decl;

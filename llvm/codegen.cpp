@@ -11,7 +11,7 @@
 /*******************************************************************************
  * ActivationRecord
  *******************************************************************************/
-typedef std::unordered_map<std::string, llvm::AllocaInst*> ValTable;
+typedef std::unordered_map<std::string, llvm::Value*> ValTable;
 typedef std::unordered_map<std::string, llvm::Function*> FuncMap;
 typedef std::vector<llvm::Type*> TypeVec;
 typedef std::unordered_map<std::string, llvm::Type*> TypeTable;
@@ -45,11 +45,11 @@ void ActivationRecord::addVar(std::string name, Type type, PassMode mode) {
     varTypes[name] = translateType(type, mode);
 }
 
-void ActivationRecord::addVal(std::string name, llvm::AllocaInst *val) {
+void ActivationRecord::addVal(std::string name, llvm::Value *val) {
     this->varValues[name] = val;
 }
 
-void ActivationRecord::addAddr(std::string name, llvm::AllocaInst *addr) {
+void ActivationRecord::addAddr(std::string name, llvm::Value *addr) {
     this->addresses[name] = addr;
 }
 
@@ -65,11 +65,11 @@ llvm::Type* ActivationRecord::getVar(std::string name) {
     return this->varTypes[name];
 }
 
-llvm::AllocaInst* ActivationRecord::getVal(std::string name) {
+llvm::Value* ActivationRecord::getVal(std::string name) {
     return this->varValues[name];
 }
 
-llvm::AllocaInst* ActivationRecord::getAddr(std::string name) {
+llvm::Value* ActivationRecord::getAddr(std::string name) {
     return this->addresses[name];
 }
 
@@ -121,6 +121,7 @@ void LLVMScope::closeScope() {
 }
 
 void LLVMScope::addFunc(std::string id, llvm::Function *func) {
+    this->is_initialized = true;
     this->functions.front()[id] = func;
 }
 

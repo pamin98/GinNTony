@@ -14,10 +14,18 @@
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/Support/FileSystem.h"
 
-
+#include "llvm/Transforms/IPO/DeadArgumentElimination.h"
 
 
 #include "llvm/IR/LegacyPassManager.h"
+#include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/LegacyPassManager.h>
+#include <llvm/IR/Value.h>
+#include <llvm/IR/Verifier.h>
+#include <llvm/Transforms/InstCombine/InstCombine.h>
+#include <llvm/Transforms/Scalar.h>
+#include <llvm/Transforms/Scalar/GVN.h>
+#include <llvm/Transforms/Utils.h>
 
 #include <iostream>
 #include <map>
@@ -38,8 +46,6 @@
 #include <iostream>
 #include <ctime>
 #include <unistd.h>
-
-// using namespace llvm;
 
 static void codegenLibs();
 
@@ -82,11 +88,14 @@ static llvm::IRBuilder<> Builder(TheContext);
 static std::unique_ptr<llvm::Module> TheModule;
 static std::map<std::string, llvm::AllocaInst *> NamedValues;
 static std::unique_ptr<llvm::legacy::FunctionPassManager> TheFPM;
+static llvm::Function *TheInit;
+static llvm::Function *TheMalloc;
 
 static llvm::Type *i32 = llvm::Type::getInt32Ty(TheContext);
 static llvm::Type *i8 = llvm::Type::getInt8Ty(TheContext);
 static llvm::Type *i1 = llvm::Type::getInt1Ty(TheContext);
 static llvm::Type *proc = llvm::Type::getVoidTy(TheContext);
+
 
 static inline llvm::Constant *c32(int n)
 {
@@ -106,27 +115,7 @@ static inline llvm::Constant *c1(int n)
 static std::deque<ActivationRecord *> activationRecordStack;
 static LLVMScope scopes;
 
-static inline std::string gen_random(const int len) {
-    
-    std::string tmp_s;
-    static const char alphanum[] =
-        "0123456789"
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        "abcdefghijklmnopqrstuvwxyz";
-    
-    srand( (unsigned) time(NULL) * getpid());
 
-    tmp_s.reserve(len);
-
-    for (int i = 0; i < len; ++i) 
-        tmp_s += alphanum[rand() % (sizeof(alphanum) - 1)];
-    
-    
-    return tmp_s;
-    
-}
-
-// TODO REFERENCES
 inline llvm::Type *translateType(Type type, PassMode mode = PASS_BY_VALUE)
 {
 	llvm::Type *ret;
@@ -135,7 +124,6 @@ inline llvm::Type *translateType(Type type, PassMode mode = PASS_BY_VALUE)
 	case TYPE_INTEGER:
 	{
 		ret = llvm::Type::getInt32Ty(TheContext);
-		// ret->isPointerTy();
 		break;
 	}
 	case TYPE_BOOLEAN:
@@ -183,65 +171,94 @@ inline llvm::Type *translateType(Type type, PassMode mode = PASS_BY_VALUE)
 	return ret;
 }
 
+inline static int sizeOfDataType(Type t)
+{
+	int ret;
+	switch (t->dtype)
+	{
+	case TYPE_INTEGER:
+	{
+		ret = 4;
+		break;
+	}
+	case TYPE_BOOLEAN:
+	{
+		ret = 1;
+		break;
+	}
+	case TYPE_CHAR:
+	{
+		ret = 1;
+		break;
+	}
+	case TYPE_LIST:
+	{
+		ret = sizeOfDataType(t->refType) + 8;
+		
+		break;
+	}
+	case TYPE_IARRAY:
+	{
+		ret = sizeOfDataType(t->refType);
+		break;
+	}
+	default:
+		break;
+	}
+	return ret;
+}
+
 class AST
 {
 public:
 	virtual ~AST() {}
 	virtual void sem() {}
 
+	llvm::Function *f;
+
 	virtual llvm::Value *codegen()
 	{
 		return nullptr;
 	}
 
-	void llvm_compiler_and_dump()
+	void llvm_compile_and_dump()
 	{
 		scopes.openScope();
 		TheModule = std::make_unique<llvm::Module>("program", TheContext);
 		TheFPM = std::make_unique<llvm::legacy::FunctionPassManager>(TheModule.get());
+
+		TheFPM->add(llvm::createPromoteMemoryToRegisterPass());
+		TheFPM->add(llvm::createMemCpyOptPass());
+		TheFPM->add(llvm::createInstructionCombiningPass());
+		TheFPM->add(llvm::createReassociatePass());
+		TheFPM->add(llvm::createGVNPass());
+		TheFPM->add(llvm::createCFGSimplificationPass());
+		TheFPM->add(llvm::createConstantPropagationPass());
+		TheFPM->add(llvm::createDeadCodeEliminationPass());
+		
+
 		TheFPM->doInitialization();
 
 		codegenLibs();
 
-		// llvm::FunctionType *main_type = llvm::FunctionType::get(i32, {}, false);
-		// llvm::Function *main = llvm::Function::Create(main_type, llvm::Function::ExternalLinkage,"main", TheModule.get());
-		// llvm::BasicBlock *BB = llvm::BasicBlock::Create(TheContext, "entry", main);
-		// Builder.SetInsertPoint(BB);
 		this->codegen();
-		// Builder.CreateRet(c32(0));
-		// TheFPM->run(*main);
 
 		bool bad = llvm::verifyModule(*TheModule, &llvm::errs());
 		if (bad) 
 		{
 			std::cerr << std::endl << std::endl << "The IR is bad!" << std::endl;
 			TheModule->print(llvm::errs(), nullptr);
-			// llvm::file
 			exit(1);
 		}
 		else
 		{
-			// TheFPM->run(*main);
-			// llvm::
+			TheFPM->run(*(this->f));
 			TheModule->print(llvm::outs(), nullptr);
 			std::error_code EC;
-			llvm::raw_fd_ostream OS("./module.ll", EC, llvm::sys::fs::F_None);
+			llvm::raw_fd_ostream OS("./module.imm", EC, llvm::sys::fs::F_None);
 			llvm::WriteBitcodeToFile(*TheModule, OS);
 			OS.flush();
 		}
-		// // Optimize!
-		// TheFPM->run(*main);
-		// // Print out the IR.
-		// llvm:WriteBitcodeToFile()
-		// TheModule->print(llvm::outs(), nullptr);
-		// // void llvm::WriteBitcodeToFile(const Module *M, raw_ostream &Out);
-		// // llvm::WriteBitcodeToFile(TheModule, )
-
-		// // std::error_code EC;
-		// // llvm::raw_fd_ostream OS("module", EC, llvm::sys::fs::F_None);
-		// // llvm::WriteBitcodeToFile(TheModule, OS);
-		// // OS.flush();
-		// // llvm::WriteBitCodeToFile
 	}
 };
 
@@ -297,7 +314,6 @@ public:
 	void reverse()
 	{
 		std::reverse(this->stmt_list.begin(), this->stmt_list.end());
-		// this->stmt_list.
 	}
 
 	virtual llvm::Value *codegen() override
@@ -367,6 +383,7 @@ public:
 			{
 				auto *addr = Builder.CreateLoad(ar->getAddr(var));
 				return Builder.CreateLoad(addr);
+				
 			}
 			else
 				return Builder.CreateLoad(ar->getVal(var));
@@ -375,50 +392,10 @@ public:
 		else 
 		{
 			auto *idx = this->index->codegen();
-			if (ar->isRef(this->var)) {
-				auto *ptr = Builder.CreateLoad(ar->getAddr(this->var));
-				auto *addr = Builder.CreateGEP(ptr, idx);
-				return Builder.CreateLoad(addr);
-			} 
-			else 
-			{
-				return Builder.CreateLoad(
-									Builder.CreateGEP(ar->getVal(this->var),
-									std::vector<llvm::Value *>{c32(0), idx})
-								);
-			}
+			auto *addr = Builder.CreateGEP(ar->getAddr(this->var), idx);
+			return Builder.CreateLoad(addr);
     	}
-    	/* Fail */
     	return nullptr;
-		// if( index == NULL )
-		// {
-		// 	if (activationRecordStack.front()->isRef(var))
-		// 	{
-		// 		auto *addr = Builder.CreateLoad(activationRecordStack.front()->getAddr(var));
-		// 		return Builder.CreateLoad(addr);
-		// 	}
-		// 	else
-		// 		return Builder.CreateLoad(activationRecordStack.front()->getVal(var));
-		// 	return nullptr;
-		// }
-		// else 
-		// {
-		// 	auto *idx = this->index->codegen();
-		// 	if (activationRecordStack.front()->isRef(this->var)) {
-		// 		auto *ptr = Builder.CreateLoad(activationRecordStack.front()->getAddr(this->var));
-		// 		auto *addr = Builder.CreateGEP(ptr, idx);
-		// 		return Builder.CreateLoad(addr);
-		// 	} 
-		// 	else 
-		// 	{
-		// 		return Builder.CreateLoad(
-		// 							Builder.CreateGEP(activationRecordStack.front()->getVal(this->var),
-		// 							std::vector<llvm::Value *>{c32(0), idx})
-		// 						);
-		// 	}
-    	// }
-    	// /* Fail */
-    	// return nullptr;
 	}
 
 private:
@@ -648,8 +625,13 @@ public:
 			llvm::FunctionType *ftype = llvm::FunctionType::get(
 				translateType(this->header->getType()), activationRecordStack.front()->getArgs(), false);
 
-			llvm::Function *func = llvm::Function::Create(
-				ftype, llvm::Function::ExternalLinkage, header->getName(), TheModule.get());
+			llvm::Function *func;
+			if( scopes.is_initialized )
+				func = llvm::Function::Create(
+					ftype, llvm::Function::ExternalLinkage, header->getName(), TheModule.get());
+			else
+				func = llvm::Function::Create(
+					ftype, llvm::Function::ExternalLinkage, "main", TheModule.get());
 
 			activationRecordStack.front()->setFunc(func);
 			scopes.addFunc(std::string(header->getName()), func);
@@ -660,6 +642,7 @@ public:
 		scopes.openScope();
 
 		llvm::Function *func = scopes.getFunc(header->getName());
+		this->f = func;
 
 		int index = 0;
 		auto var_list = this->header->getFormalList()->get_arg_names();
@@ -765,18 +748,22 @@ public:
 	virtual void sem() override
 	{
 		for (const char *variable : var_list->getList())
+		{
+			if(strcmp(variable,"sum")==0)
+			{
+				std::cout << "HERE" << std::endl;
+				std::cout << type << std::endl;
+			}
 			newVariable(variable, type);
+		}
 	}
 
 	virtual llvm::Value *codegen() override
 	{
 		for (const char *varName : var_list->getList())
 		{
-			std::string fml = gen_random(10);
 			auto llvm_type = translateType(this->type);
 			auto alloca = Builder.CreateAlloca(llvm_type, nullptr, varName);
-
-
 
 			activationRecordStack.front()->addVar(varName, type);
 			activationRecordStack.front()->addVal(varName, alloca);
@@ -808,6 +795,32 @@ public:
 
 private:
 	std::vector<Expr *> expr_list;
+};
+
+class ConstString : public Expr
+{
+public:
+	ConstString(const char *str) : str(str) {}
+
+	virtual void sem() override
+	{
+		type = typeIArray(typeChar);
+	}
+
+	virtual void checkLVal() override
+	{
+		error("Lvalue cannot be a string literal.");
+	}
+
+	virtual llvm::Value *codegen() override
+	{
+		return Builder.CreateGlobalStringPtr(str);
+		// return Builder.CreateGlobalStringPtr(s, "_string",0);
+		// return Builder.CreateGlobalStringPtr(llvm::StringRef(this->str), "_string", );
+	}
+
+private:
+	const char *str;
 };
 
 class CallObject : public Expr, public Stmt
@@ -949,13 +962,9 @@ public:
 				}
 				else
 				{
-					// auto strlit = std::dynamic_pointer_cast<ConstString>(functionArgs[index]);
-					/* Found string literal */
-					// if (strlit) {
 					callArgs.push_back(functionArgs[index]->codegen());
 					index++;
 					continue;
-					// }
 				}
 			}
 			else
@@ -978,29 +987,7 @@ private:
 	ExprList *expr_list;
 };
 
-class ConstString : public Expr
-{
-public:
-	ConstString(const char *str) : str(str) {}
 
-	virtual void sem() override
-	{
-		type = typeIArray(typeChar);
-	}
-
-	virtual void checkLVal() override
-	{
-		error("Lvalue cannot be a string literal.");
-	}
-
-	virtual llvm::Value *codegen() override
-	{
-		return Builder.CreateGlobalStringPtr(this->str);
-	}
-
-private:
-	const char *str;
-};
 
 class ConstInt : public Expr
 {
@@ -1269,10 +1256,11 @@ public:
 		}
 		else if (op == append)
 		{
-			auto *new_head_alloca = Builder.CreateAlloca(r->getType(), nullptr);
+			auto size = 8 + sizeOfDataType(right->getType()->refType);
+			auto *new_head_alloca = Builder.CreateCall(TheMalloc, {llvm::ConstantInt::get(i32, size)});
+
 			auto *new_head_struct = Builder.CreateLoad(new_head_alloca);
 
-			// auto *new_val_address = Builder.CreateGEP(new_head_struct,1);
 			auto *new_val_address = Builder.CreateConstGEP1_32(new_head_struct, 1);
 			Builder.CreateStore(l, new_val_address);
 
@@ -1308,40 +1296,6 @@ private:
 	Expr *right;
 };
 
-// class ArrayIndexing : public Expr
-// {
-// public:
-// 	ArrayIndexing(Expr *a, Expr *i) : array(a), index(i) {}
-// 	~ArrayIndexing()
-// 	{
-// 		delete array;
-// 		delete index;
-// 	}
-
-// 	virtual void sem() override
-// 	{
-// 		if (index->getType()->dtype != TYPE_INTEGER)
-// 			error("Array index must be of type integer.");
-// 		if (array->getType()->dtype != TYPE_IARRAY)
-// 			error("Expected array, found %s", TypeToStr(array->getType()));
-
-// 		type = array->getType()->refType;
-// 	}
-
-// 	llvm::Value* codegenIndex()
-// 	{
-// 		return index->codegen();
-// 	}
-
-// 	// virtual llvm::Value* codegen() override
-// 	// {
-
-// 	// }
-
-// private:
-// 	Expr *array;
-// 	Expr *index;
-// };
 
 class ArrayInit : public Stmt
 {
@@ -1365,17 +1319,21 @@ public:
 			error("Array size must be of type integer.");
 	}
 
-	// Sto semantic na koita3oume na tsekaroume oti ikanopoieitai kai to semantic tou assignStmt
-	// oti to aristero kommati exei to idio data type me to de3i kommati
-	// na ftia3oume parser.y sto 212
 	virtual llvm::Value *codegen() override
 	{
-		auto size = expr->codegen();
-		// this->type->size = size;
-		auto *arrayType = translateType(this->type);
-		auto *alloca = Builder.CreateAlloca(arrayType, size, this->variable->getName());
+		auto len = expr->codegen();
+		int data_type_size = sizeOfDataType(type);
+		llvm::Value *total_size = Builder.CreateMul(len, llvm::ConstantInt::get(i32, data_type_size));
+		auto *alloca = Builder.CreateCall(TheMalloc, {total_size});
 		activationRecordStack.front()->addVar(variable->getName(), this->type);
 		activationRecordStack.front()->addVal(variable->getName(), alloca);
+		activationRecordStack.front()->addAddr(variable->getName(),alloca);
+
+		// this->type->size = size;
+		// auto *arrayType = translateType(this->type);
+		// auto *alloca = Builder.CreateAlloca(arrayType, size, this->variable->getName());
+		// activationRecordStack.front()->addVar(variable->getName(), this->type);
+		// activationRecordStack.front()->addVal(variable->getName(), alloca);
 		return nullptr;
 	}
 
@@ -1653,13 +1611,14 @@ void codegenLibs()
 	auto *writeIntegerType = llvm::FunctionType::get(proc, std::vector<llvm::Type *>{i32}, false);
 	scopes.addFunc("puti",llvm::Function::Create(writeIntegerType,llvm::Function::ExternalLinkage,"writeInteger", TheModule.get()));
 	
-	auto *writeByteType = llvm::FunctionType::get(proc, std::vector<llvm::Type *>{i8}, false);
-	scopes.addFunc("putb",llvm::Function::Create(writeByteType,llvm::Function::ExternalLinkage,"writeByte", TheModule.get()));
+	auto *writeBooleanType = llvm::FunctionType::get(proc, std::vector<llvm::Type *>{i1}, false);
+	scopes.addFunc("putb",llvm::Function::Create(writeBooleanType,llvm::Function::ExternalLinkage,"writeBoolean", TheModule.get()));
 
 	auto *writeCharType = llvm::FunctionType::get(proc, std::vector<llvm::Type *>{i8}, false);
 	scopes.addFunc("putc",llvm::Function::Create(writeCharType,llvm::Function::ExternalLinkage,"writeChar", TheModule.get()));
 	
-	auto *writeStringType = llvm::FunctionType::get(proc, std::vector<llvm::Type *>{i8->getPointerTo()}, false);
+	auto i8 = llvm::IntegerType::get(TheContext, 8);
+	auto *writeStringType = llvm::FunctionType::get(llvm::Type::getVoidTy(TheContext), {llvm::PointerType::get(i8, 0)}, false);
 	scopes.addFunc("puts",llvm::Function::Create(writeStringType,llvm::Function::ExternalLinkage,"writeString", TheModule.get()));
 	
 	auto *readIntegerType = llvm::FunctionType::get(i32, std::vector<llvm::Type *>{}, false);
@@ -1694,4 +1653,12 @@ void codegenLibs()
 
 	auto *strcatType = llvm::FunctionType::get(proc, std::vector<llvm::Type *>{i8->getPointerTo(), i8->getPointerTo()},false);
 	scopes.addFunc("strcat", llvm::Function::Create(strcatType, llvm::Function::ExternalLinkage, "strcat", TheModule.get()));
+	scopes.is_initialized = false;
+
+	// auto i64 = llvm::IntegerType::get(TheContext, 64);
+
+	llvm::FunctionType *malloc_type = llvm::FunctionType::get(llvm::PointerType::get(i32, 0), {i32}, false);
+    TheMalloc = llvm::Function::Create(malloc_type, llvm::Function::ExternalLinkage, "GC_malloc", TheModule.get());
+    llvm::FunctionType *init_type = llvm::FunctionType::get(llvm::Type::getVoidTy(TheContext), {}, false);
+    TheInit = llvm::Function::Create(init_type, llvm::Function::ExternalLinkage, "GC_init", TheModule.get());
 }
