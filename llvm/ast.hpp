@@ -311,11 +311,6 @@ public:
 			s->sem();
 	}
 
-	void reverse()
-	{
-		std::reverse(this->stmt_list.begin(), this->stmt_list.end());
-	}
-
 	virtual llvm::Value *codegen() override
 	{
 		for (Stmt *s : stmt_list)
@@ -369,15 +364,6 @@ public:
 	{
 		ActivationRecord *ar = activationRecordStack.front();
 
-		// for(auto a : activationRecordStack)
-		// {
-		// 	if( a->varExists(var) )
-		// 	{
-		// 		ar = a;
-		// 		break;
-		// 	}
-		// }
-
 		if( index == NULL )
 		{
 			if (ar->isRef(var))
@@ -425,7 +411,7 @@ class Formal : public AST
 public:
 	Formal(Type t, VarList *v, bool isRef = false) : type(t), var_list(v)
 	{
-		if (isRef || t->dtype == TYPE_IARRAY )
+		if (isRef || t->dtype == TYPE_IARRAY || t->dtype == TYPE_LIST )
 			mode = PASS_BY_REFERENCE;
 		else
 			mode = PASS_BY_VALUE;
@@ -451,7 +437,6 @@ public:
 		for (auto v : var_list->getList())
 		{
 			activationRecordStack.front()->addArg(v, type, mode);
-			activationRecordStack.front()->addVar(v, type, mode);
 		}
 
 		return nullptr;
@@ -750,11 +735,6 @@ public:
 	{
 		for (const char *variable : var_list->getList())
 		{
-			if(strcmp(variable,"sum")==0)
-			{
-				std::cout << "HERE" << std::endl;
-				std::cout << type << std::endl;
-			}
 			newVariable(variable, type);
 		}
 	}

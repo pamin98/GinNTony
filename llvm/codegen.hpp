@@ -19,7 +19,7 @@ class ActivationRecord;
 class ActivationRecord 
 {
     private :
-        llvm::Function   *func;
+        llvm::Function                                      *func;
         std::vector<llvm::Type*>                            args;
         std::vector<std::string>                            argNames;
         std::unordered_map<std::string, llvm::Type*>        varTypes;
