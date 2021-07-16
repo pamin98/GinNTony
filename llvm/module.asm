@@ -8,7 +8,21 @@ main:                                   # @main
 # %bb.0:                                # %entry
 	pushq	%rax
 	.cfi_def_cfa_offset 16
-	movl	$42, %edi
+	movl	$40, %edi
+	callq	GC_malloc@PLT
+	xorl	%ecx, %ecx
+	.p2align	4, 0x90
+.LBB0_1:                                # %loop
+                                        # =>This Inner Loop Header: Depth=1
+	leaq	1(%rcx), %rdx
+	movl	%edx, %esi
+	imull	%ecx, %esi
+	movl	%esi, (%rax,%rcx,4)
+	cmpl	$10, %edx
+	movq	%rdx, %rcx
+	jl	.LBB0_1
+# %bb.2:                                # %after
+	movl	24(%rax), %edi
 	callq	writeInteger@PLT
 	movl	$.L__unnamed_1, %edi
 	callq	writeString@PLT
