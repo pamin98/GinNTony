@@ -6,13 +6,14 @@ void codegenLibs()
 	auto *writeIntegerType = llvm::FunctionType::get(proc, std::vector<llvm::Type *>{i32}, false);
 	scopes.addFunc("puti",llvm::Function::Create(writeIntegerType,llvm::Function::ExternalLinkage,"writeInteger", TheModule.get()));
 	
-	auto *writeByteType = llvm::FunctionType::get(proc, std::vector<llvm::Type *>{i8}, false);
-	scopes.addFunc("putb",llvm::Function::Create(writeByteType,llvm::Function::ExternalLinkage,"writeByte", TheModule.get()));
+	auto *writeBooleanType = llvm::FunctionType::get(proc, std::vector<llvm::Type *>{i1}, false);
+	scopes.addFunc("putb",llvm::Function::Create(writeBooleanType,llvm::Function::ExternalLinkage,"writeBoolean", TheModule.get()));
 
 	auto *writeCharType = llvm::FunctionType::get(proc, std::vector<llvm::Type *>{i8}, false);
 	scopes.addFunc("putc",llvm::Function::Create(writeCharType,llvm::Function::ExternalLinkage,"writeChar", TheModule.get()));
 	
-	auto *writeStringType = llvm::FunctionType::get(proc, std::vector<llvm::Type *>{i8->getPointerTo()}, false);
+	auto i8 = llvm::IntegerType::get(TheContext, 8);
+	auto *writeStringType = llvm::FunctionType::get(llvm::Type::getVoidTy(TheContext), {llvm::PointerType::get(i8, 0)}, false);
 	scopes.addFunc("puts",llvm::Function::Create(writeStringType,llvm::Function::ExternalLinkage,"writeString", TheModule.get()));
 	
 	auto *readIntegerType = llvm::FunctionType::get(i32, std::vector<llvm::Type *>{}, false);
@@ -47,4 +48,12 @@ void codegenLibs()
 
 	auto *strcatType = llvm::FunctionType::get(proc, std::vector<llvm::Type *>{i8->getPointerTo(), i8->getPointerTo()},false);
 	scopes.addFunc("strcat", llvm::Function::Create(strcatType, llvm::Function::ExternalLinkage, "strcat", TheModule.get()));
+	scopes.is_initialized = false;
+
+	// auto i64 = llvm::IntegerType::get(TheContext, 64);
+
+	llvm::FunctionType *malloc_type = llvm::FunctionType::get(llvm::PointerType::get(i32, 0), {i32}, false);
+    TheMalloc = llvm::Function::Create(malloc_type, llvm::Function::ExternalLinkage, "GC_malloc", TheModule.get());
+    llvm::FunctionType *init_type = llvm::FunctionType::get(llvm::Type::getVoidTy(TheContext), {}, false);
+    TheInit = llvm::Function::Create(init_type, llvm::Function::ExternalLinkage, "GC_init", TheModule.get());
 }
