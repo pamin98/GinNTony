@@ -60,6 +60,8 @@
         "cinttypes": "cpp",
         "typeinfo": "cpp",
         "set": "cpp",
-        "*.def": "cpp"
+        "*.def": "cpp",
+        "regex": "cpp",
+        "*.inc": "cpp"
     }
 }

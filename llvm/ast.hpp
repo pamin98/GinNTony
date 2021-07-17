@@ -215,6 +215,12 @@ public:
 	virtual void sem() {}
 
 	llvm::Function *f;
+	uint semantic_line_no;
+
+	virtual void set_line(uint l_no)
+	{
+		this->semantic_line_no = l_no;
+	}
 
 	virtual llvm::Value *codegen()
 	{
@@ -270,7 +276,7 @@ public:
 		if (type == NULL)
 			sem();
 		if (!equalType(t, type))
-			error("Invalid type of operand. Expected %s, found %s.", TypeToStr(t), TypeToStr(type));
+			error(this->semantic_line_no, "Invalid type of operand. Expected %s, found %s.", TypeToStr(t), TypeToStr(type));
 	}
 
 	Type getType()
@@ -329,16 +335,16 @@ public:
 
 	virtual void sem() override
 	{
-		SymbolEntry *e = lookupEntry(var, LOOKUP_ALL_SCOPES, true);
+		SymbolEntry *e = lookupEntry(var, LOOKUP_ALL_SCOPES, true, this->semantic_line_no);
 		if (e->entryType == ENTRY_FUNCTION)
-			error("%s is a function, expected parenthesis", e->id);
+			error(this->semantic_line_no, "%s is a function, expected parenthesis", e->id);
 		type = e->eVariable.type;
 
 		if (index != NULL && index->getType()->dtype != TYPE_INTEGER)
-			error("Array index must be of type integer.");
+			error(this->semantic_line_no, "Array index must be of type integer.");
 
 		if (index != NULL && this->getType()->dtype != TYPE_IARRAY)
-			error("Expected array, found %s", TypeToStr(this->getType()));
+			error(this->semantic_line_no, "Expected array, found %s", TypeToStr(this->getType()));
 		
 		if (index != NULL)
 			type = type->refType;
@@ -429,7 +435,7 @@ public:
 	virtual void passParameters(SymbolEntry *f)
 	{
 		for (const char *v : var_list->getList())
-			newParameter(v, type, mode, f);
+			newParameter(v, type, mode, f, this->semantic_line_no);
 	}
 
 	virtual llvm::Value *codegen() override
@@ -508,12 +514,12 @@ public:
 	virtual void sem() override
 	{
 		/* newFunction performs check for duplicate declaration in the same scope */
-		SymbolEntry *f = newFunction(functionName);
+		SymbolEntry *f = newFunction(functionName, this->semantic_line_no);
 		if (header_type == Func_Decl) /* Declarations should be forwarded */
 			declareFunction(f);
 		openScope();
 		formal_list->passParameters(f);
-		endFunctionHeader(f, type);
+		endFunctionHeader(f, type, this->semantic_line_no);
 	}
 
 	virtual Type getType()
@@ -593,7 +599,7 @@ public:
 		header->sem();
 		def_list->sem();
 		stmt_list->sem();
-		closeScope();
+		closeScope(this->semantic_line_no);
 	}
 
 	virtual llvm::Value *codegen() override
@@ -696,7 +702,7 @@ public:
 	virtual void sem() override
 	{
 		header->sem();
-		closeScope();
+		closeScope(this->semantic_line_no);
 	}
 
 	virtual llvm::Value *codegen()
@@ -735,7 +741,7 @@ public:
 	{
 		for (const char *variable : var_list->getList())
 		{
-			newVariable(variable, type);
+			newVariable(variable, type, this->semantic_line_no);
 		}
 	}
 
@@ -790,7 +796,7 @@ public:
 
 	virtual void checkLVal() override
 	{
-		error("Lvalue cannot be a string literal.");
+		error(this->semantic_line_no, "Lvalue cannot be a string literal.");
 	}
 
 	virtual llvm::Value *codegen() override
@@ -810,6 +816,13 @@ public:
 	{
 		delete functionName;
 		delete expr_list;
+	}
+
+	uint semantic_line_no;
+
+	void set_line(uint l_no)
+	{
+		this->semantic_line_no = l_no;
 	}
 
 	virtual void sem() override
@@ -851,7 +864,7 @@ public:
 		}
 		int functionArguments = 0;
 		bool argMismatch = false;
-		SymbolEntry *f = lookupEntry(functionName, LOOKUP_ALL_SCOPES, true);
+		SymbolEntry *f = lookupEntry(functionName, LOOKUP_ALL_SCOPES, true, this->semantic_line_no);
 		type = f->eFunction.resultType;
 		SymbolEntry *args;
 		args = f->eFunction.firstArgument;
@@ -873,7 +886,7 @@ public:
 			args = args->eParameter.next;
 		}
 		if (argMismatch)
-			error("Expected %d arguments for function %s, but %lu were given.", functionArguments, functionName, expr_list->getList().size());
+			error(this->semantic_line_no, "Expected %d arguments for function %s, but %lu were given.", functionArguments, functionName, expr_list->getList().size());
 		else if (args)
 		{
 			while (args)
@@ -881,7 +894,7 @@ public:
 				++functionArguments;
 				args = args->eParameter.next;
 			}
-			error("Expected %d arguments for function %s, but %lu were given.", functionArguments, functionName, expr_list->getList().size());
+			error(this->semantic_line_no, "Expected %d arguments for function %s, but %lu were given.", functionArguments, functionName, expr_list->getList().size());
 		}
 	}
 
@@ -958,7 +971,7 @@ public:
 
 	virtual void checkLVal() override
 	{
-		error("Lvalue cannot be a function call.");
+		error(this->semantic_line_no, "Lvalue cannot be a function call.");
 	}
 
 private:
@@ -1073,14 +1086,14 @@ public:
 		Type leftType = left->getType();
 		Type rightType = right->getType();
 		if (!equalType(leftType, rightType))
-			error("Operands of comparison have different types: %s and %s.", TypeToStr(leftType), TypeToStr(rightType));
+			error(this->semantic_line_no, "Operands of comparison have different types: %s and %s.", TypeToStr(leftType), TypeToStr(rightType));
 		if (leftType->dtype == TYPE_INTEGER || leftType->dtype == TYPE_BOOLEAN || leftType->dtype == TYPE_CHAR)
 		{
 			type = typeBoolean;
 			return;
 		}
 		else
-			error("Comparisons supported only for integers, booleans and characters.");
+			error(this->semantic_line_no, "Comparisons supported only for integers, booleans and characters.");
 	}
 
 	virtual llvm::Value *codegen() override
@@ -1189,17 +1202,17 @@ public:
 			break;
 		case head:
 			if (right->getType()->dtype != TYPE_LIST)
-				error("Expected list, found %s.", TypeToStr(right->getType()));
+				error(this->semantic_line_no, "Expected list, found %s.", TypeToStr(right->getType()));
 			type = right->getType()->refType;
 			break;
 		case tail:
 			if (right->getType()->dtype != TYPE_LIST)
-				error("Expected list, found %s.", TypeToStr(right->getType()));
+				error(this->semantic_line_no, "Expected list, found %s.", TypeToStr(right->getType()));
 			type = right->getType();
 			break;
 		case nilq:
 			if (right->getType()->dtype != TYPE_LIST && right->getType()->dtype != TYPE_NIL)
-				error("Expected list, found %s.", TypeToStr(right->getType()));
+				error(this->semantic_line_no, "Expected list, found %s.", TypeToStr(right->getType()));
 			type = typeBoolean;
 			break;
 		case append:
@@ -1210,7 +1223,7 @@ public:
 			}
 			else if (!equalType(left->getType(), right->getType()->refType))
 			{
-				error("Cannot append %s to %s.", TypeToStr(left->getType()), TypeToStr(right->getType()));
+				error(this->semantic_line_no, "Cannot append %s to %s.", TypeToStr(left->getType()), TypeToStr(right->getType()));
 			}
 			type = right->getType();
 		}
@@ -1291,11 +1304,11 @@ public:
 	virtual void sem() override
 	{
 		if (refT->dtype != TYPE_INTEGER && refT->dtype != TYPE_BOOLEAN && refT->dtype != TYPE_CHAR)
-			error("Arrays of integers, booleans and characters are only supported.");
+			error(this->semantic_line_no, "Arrays of integers, booleans and characters are only supported.");
 
 		this->type = typeIArray(refT);
 		if (expr->getType()->dtype != TYPE_INTEGER)
-			error("Array size must be of type integer.");
+			error(this->semantic_line_no, "Array size must be of type integer.");
 	}
 
 	virtual llvm::Value *codegen() override
@@ -1401,7 +1414,7 @@ public:
 	{
 		Type returnType = currentScope->returnType;
 		if (!equalType(returnType, typeVoid))
-			error("Exit called in non-void function.");
+			error(this->semantic_line_no, "Exit called in non-void function.");
 	}
 };
 
@@ -1416,7 +1429,7 @@ public:
 		Type returnType = currentScope->returnType;
 		Type exprType = returnExpr->getType();
 		if (!equalType(exprType, returnType))
-			error("Invalid type of return expression: Expected %s, found %s.", TypeToStr(returnType), TypeToStr(exprType));
+			error(this->semantic_line_no, "Invalid type of return expression: Expected %s, found %s.", TypeToStr(returnType), TypeToStr(exprType));
 	}
 
 	virtual llvm::Value *codegen() override
@@ -1584,3 +1597,61 @@ private:
 	Stmt *steps;
 	StmtList *loop_body;
 };
+
+
+void codegenLibs()
+{
+	auto *writeIntegerType = llvm::FunctionType::get(proc, std::vector<llvm::Type *>{i32}, false);
+	scopes.addFunc("puti",llvm::Function::Create(writeIntegerType,llvm::Function::ExternalLinkage,"writeInteger", TheModule.get()));
+	
+	auto *writeBooleanType = llvm::FunctionType::get(proc, std::vector<llvm::Type *>{i1}, false);
+	scopes.addFunc("putb",llvm::Function::Create(writeBooleanType,llvm::Function::ExternalLinkage,"writeBoolean", TheModule.get()));
+
+	auto *writeCharType = llvm::FunctionType::get(proc, std::vector<llvm::Type *>{i8}, false);
+	scopes.addFunc("putc",llvm::Function::Create(writeCharType,llvm::Function::ExternalLinkage,"writeChar", TheModule.get()));
+	
+	auto i8 = llvm::IntegerType::get(TheContext, 8);
+	auto *writeStringType = llvm::FunctionType::get(llvm::Type::getVoidTy(TheContext), {llvm::PointerType::get(i8, 0)}, false);
+	scopes.addFunc("puts",llvm::Function::Create(writeStringType,llvm::Function::ExternalLinkage,"writeString", TheModule.get()));
+	
+	auto *readIntegerType = llvm::FunctionType::get(i32, std::vector<llvm::Type *>{}, false);
+	scopes.addFunc("geti",llvm::Function::Create(readIntegerType,llvm::Function::ExternalLinkage,"readInteger", TheModule.get()));
+	
+	auto *readByteType = llvm::FunctionType::get(i8, std::vector<llvm::Type *>{}, false);
+	scopes.addFunc("getb",llvm::Function::Create(readByteType,llvm::Function::ExternalLinkage,"readByte", TheModule.get()));
+
+	auto *readCharType = llvm::FunctionType::get(i8, std::vector<llvm::Type *>{}, false);
+	scopes.addFunc("getc",llvm::Function::Create(readCharType,llvm::Function::ExternalLinkage,"readChar", TheModule.get()));
+
+	auto *readStringType = llvm::FunctionType::get(proc, std::vector<llvm::Type *>{i32, i8->getPointerTo()}, false);
+	scopes.addFunc("gets",llvm::Function::Create(readStringType,llvm::Function::ExternalLinkage,"readString", TheModule.get()));
+
+	auto absType = llvm::FunctionType::get( i32, std::vector<llvm::Type *>{i32}, false );
+	scopes.addFunc("abs", llvm::Function::Create(absType,llvm::Function::ExternalLinkage,"abs", TheModule.get()));
+
+	auto ordType = llvm::FunctionType::get( i32, std::vector<llvm::Type *>{i8}, false );
+	scopes.addFunc("ord", llvm::Function::Create(ordType,llvm::Function::ExternalLinkage,"ord", TheModule.get()));
+
+	auto chrType = llvm::FunctionType::get( i8, std::vector<llvm::Type *>{i32}, false );
+	scopes.addFunc("chr", llvm::Function::Create(chrType,llvm::Function::ExternalLinkage,"chr", TheModule.get()));
+
+	auto *strlenType = llvm::FunctionType::get(i32, std::vector<llvm::Type *>{i8->getPointerTo()}, false);
+	scopes.addFunc("strlen", llvm::Function::Create(strlenType, llvm::Function::ExternalLinkage,"strlen", TheModule.get()));
+
+	auto *strcmpType = llvm::FunctionType::get(i32, std::vector<llvm::Type *>{i8->getPointerTo(), i8->getPointerTo()}, false);
+	scopes.addFunc("strcmp", llvm::Function::Create(strcmpType, llvm::Function::ExternalLinkage,"strcmp", TheModule.get()));
+
+	auto *strcpyType = llvm::FunctionType::get(proc, std::vector<llvm::Type *>{i8->getPointerTo(), i8->getPointerTo()}, false);
+	scopes.addFunc("strcpy", llvm::Function::Create(strcpyType, llvm::Function::ExternalLinkage,"strcpy", TheModule.get()));
+
+	auto *strcatType = llvm::FunctionType::get(proc, std::vector<llvm::Type *>{i8->getPointerTo(), i8->getPointerTo()},false);
+	scopes.addFunc("strcat", llvm::Function::Create(strcatType, llvm::Function::ExternalLinkage, "strcat", TheModule.get()));
+	scopes.is_initialized = false;
+
+	// auto i64 = llvm::IntegerType::get(TheContext, 64);
+
+	llvm::FunctionType *malloc_type = llvm::FunctionType::get(llvm::PointerType::get(i32, 0), {i32}, false);
+    TheMalloc = llvm::Function::Create(malloc_type, llvm::Function::ExternalLinkage, "GC_malloc", TheModule.get());
+    llvm::FunctionType *init_type = llvm::FunctionType::get(llvm::Type::getVoidTy(TheContext), {}, false);
+    TheInit = llvm::Function::Create(init_type, llvm::Function::ExternalLinkage, "GC_init", TheModule.get());
+}

@@ -1721,19 +1721,19 @@ yyreduce:
 
   case 3: /* func_def: "def" header_def ':' definition_list stmt_list "end"  */
 #line 135 "parser.y"
-                                                                        { (yyval.func_def) = new FunctionDefinition((yyvsp[-4].header),(yyvsp[-2].def_list),(yyvsp[-1].stmt_list)); }
+                                                                        { (yyval.func_def) = new FunctionDefinition((yyvsp[-4].header),(yyvsp[-2].def_list),(yyvsp[-1].stmt_list)); (yyval.func_def)->set_line(yylineno); }
 #line 1726 "parser.cpp"
     break;
 
   case 4: /* func_decl: "decl" header_decl  */
 #line 139 "parser.y"
-                                                                { (yyval.func_decl) = new FunctionDeclaration((yyvsp[0].header)); }
+                                                                { (yyval.func_decl) = new FunctionDeclaration((yyvsp[0].header)); (yyval.func_decl)->set_line(yylineno); }
 #line 1732 "parser.cpp"
     break;
 
   case 5: /* definition_list: %empty  */
 #line 143 "parser.y"
-                                                                                { (yyval.def_list) = new DefinitionList(); }
+                                                                                { (yyval.def_list) = new DefinitionList(); (yyval.def_list)->set_line(yylineno);}
 #line 1738 "parser.cpp"
     break;
 
@@ -1757,7 +1757,7 @@ yyreduce:
 
   case 9: /* stmt_list: stmt  */
 #line 150 "parser.y"
-                                                                        { (yyval.stmt_list) = new StmtList((yyvsp[0].stmt)); }
+                                                                        { (yyval.stmt_list) = new StmtList((yyvsp[0].stmt)); (yyval.stmt_list)->set_line(yylineno);}
 #line 1762 "parser.cpp"
     break;
 
@@ -1769,31 +1769,31 @@ yyreduce:
 
   case 11: /* header_def: T_var '(' formal_list ')'  */
 #line 155 "parser.y"
-                                                                { (yyval.header) = new Header((yyvsp[-3].str), (yyvsp[-1].formal_list), typeVoid, Func_Def); }
+                                                                { (yyval.header) = new Header((yyvsp[-3].str), (yyvsp[-1].formal_list), typeVoid, Func_Def); (yyval.header)->set_line(yylineno);}
 #line 1774 "parser.cpp"
     break;
 
   case 12: /* header_def: type T_var '(' formal_list ')'  */
 #line 156 "parser.y"
-                                                        { (yyval.header) = new Header((yyvsp[-3].str), (yyvsp[-1].formal_list), (yyvsp[-4].type), Func_Def); }
+                                                        { (yyval.header) = new Header((yyvsp[-3].str), (yyvsp[-1].formal_list), (yyvsp[-4].type), Func_Def); (yyval.header)->set_line(yylineno);}
 #line 1780 "parser.cpp"
     break;
 
   case 13: /* header_decl: T_var '(' formal_list ')'  */
 #line 160 "parser.y"
-                                                                { (yyval.header) = new Header((yyvsp[-3].str), (yyvsp[-1].formal_list), typeVoid, Func_Decl); }
+                                                                { (yyval.header) = new Header((yyvsp[-3].str), (yyvsp[-1].formal_list), typeVoid, Func_Decl); (yyval.header)->set_line(yylineno);}
 #line 1786 "parser.cpp"
     break;
 
   case 14: /* header_decl: type T_var '(' formal_list ')'  */
 #line 161 "parser.y"
-                                                        { (yyval.header) = new Header((yyvsp[-3].str), (yyvsp[-1].formal_list), (yyvsp[-4].type), Func_Decl); }
+                                                        { (yyval.header) = new Header((yyvsp[-3].str), (yyvsp[-1].formal_list), (yyvsp[-4].type), Func_Decl); (yyval.header)->set_line(yylineno);}
 #line 1792 "parser.cpp"
     break;
 
   case 15: /* formal_list: %empty  */
 #line 165 "parser.y"
-                                                                                { (yyval.formal_list) = new FormalList(); }
+                                                                                { (yyval.formal_list) = new FormalList(); (yyval.formal_list)->set_line(yylineno);}
 #line 1798 "parser.cpp"
     break;
 
@@ -1805,7 +1805,7 @@ yyreduce:
 
   case 17: /* formal_head: %empty  */
 #line 170 "parser.y"
-                                                                                { (yyval.formal_list) = new FormalList(); }
+                                                                                { (yyval.formal_list) = new FormalList(); (yyval.formal_list)->set_line(yylineno);}
 #line 1810 "parser.cpp"
     break;
 
@@ -1817,19 +1817,19 @@ yyreduce:
 
   case 19: /* formal: type var_list  */
 #line 175 "parser.y"
-                                                                { (yyval.formal) = new Formal((yyvsp[-1].type),(yyvsp[0].var_list)); }
+                                                                { (yyval.formal) = new Formal((yyvsp[-1].type),(yyvsp[0].var_list)); (yyval.formal)->set_line(yylineno);}
 #line 1822 "parser.cpp"
     break;
 
   case 20: /* formal: "ref" type var_list  */
 #line 176 "parser.y"
-                                                        { (yyval.formal) = new Formal((yyvsp[-1].type),(yyvsp[0].var_list),true); }
+                                                        { (yyval.formal) = new Formal((yyvsp[-1].type),(yyvsp[0].var_list),true); (yyval.formal)->set_line(yylineno);}
 #line 1828 "parser.cpp"
     break;
 
   case 21: /* var_list: T_var  */
 #line 180 "parser.y"
-                                                                        { (yyval.var_list) = new VarList((yyvsp[0].str)); }
+                                                                        { (yyval.var_list) = new VarList((yyvsp[0].str)); (yyval.var_list)->set_line(yylineno);}
 #line 1834 "parser.cpp"
     break;
 
@@ -1871,7 +1871,7 @@ yyreduce:
 
   case 28: /* var_def: type var_list  */
 #line 194 "parser.y"
-                                                                { (yyval.var_definition) = new VarDefinition((yyvsp[-1].type),(yyvsp[0].var_list)); }
+                                                                { (yyval.var_definition) = new VarDefinition((yyvsp[-1].type),(yyvsp[0].var_list)); (yyval.var_definition)->set_line(yylineno);}
 #line 1876 "parser.cpp"
     break;
 
@@ -1883,25 +1883,25 @@ yyreduce:
 
   case 30: /* stmt: "exit"  */
 #line 200 "parser.y"
-                                                                                                                                                { (yyval.stmt) = new ExitStmt(); }
+                                                                                                                                                { (yyval.stmt) = new ExitStmt(); (yyval.stmt)->set_line(yylineno);}
 #line 1888 "parser.cpp"
     break;
 
   case 31: /* stmt: "return" expr  */
 #line 201 "parser.y"
-                                                                                                                                        { (yyval.stmt) = new ReturnStmt((yyvsp[0].expr)); }
+                                                                                                                                        { (yyval.stmt) = new ReturnStmt((yyvsp[0].expr)); (yyval.stmt)->set_line(yylineno);}
 #line 1894 "parser.cpp"
     break;
 
   case 32: /* stmt: "if" expr ':' stmt_list elsif_list "end"  */
 #line 202 "parser.y"
-                                                                                                                { (yyval.stmt) = new If((yyvsp[-4].expr),(yyvsp[-2].stmt_list),(yyvsp[-1].ifClass)); }
+                                                                                                                { (yyval.stmt) = new If((yyvsp[-4].expr),(yyvsp[-2].stmt_list),(yyvsp[-1].ifClass)); (yyval.stmt)->set_line(yylineno);}
 #line 1900 "parser.cpp"
     break;
 
   case 33: /* stmt: "for" simple_list ';' expr ';' simple_list ':' stmt_list "end"  */
 #line 203 "parser.y"
-                                                                                        { (yyval.stmt) = new For((yyvsp[-7].stmt_list),(yyvsp[-5].expr),(yyvsp[-3].stmt_list),(yyvsp[-1].stmt_list)); }
+                                                                                        { (yyval.stmt) = new For((yyvsp[-7].stmt_list),(yyvsp[-5].expr),(yyvsp[-3].stmt_list),(yyvsp[-1].stmt_list)); (yyval.stmt)->set_line(yylineno);}
 #line 1906 "parser.cpp"
     break;
 
@@ -1913,7 +1913,7 @@ yyreduce:
 
   case 35: /* elsif_list: "elsif" expr ':' stmt_list elsif_list  */
 #line 208 "parser.y"
-                                                                { (yyval.ifClass) = new If((yyvsp[-3].expr),(yyvsp[-1].stmt_list),(yyvsp[0].ifClass)); }
+                                                                { (yyval.ifClass) = new If((yyvsp[-3].expr),(yyvsp[-1].stmt_list),(yyvsp[0].ifClass)); (yyval.ifClass)->set_line(yylineno);}
 #line 1918 "parser.cpp"
     break;
 
@@ -1925,25 +1925,25 @@ yyreduce:
 
   case 37: /* else: "else" ':' stmt_list  */
 #line 213 "parser.y"
-                                                        { (yyval.ifClass) = new If(NULL,(yyvsp[0].stmt_list),NULL); }
+                                                        { (yyval.ifClass) = new If(NULL,(yyvsp[0].stmt_list),NULL); (yyval.ifClass)->set_line(yylineno);}
 #line 1930 "parser.cpp"
     break;
 
   case 38: /* simple: "skip"  */
 #line 217 "parser.y"
-                                                                        { (yyval.stmt) = new SkipStmt(); }
+                                                                        { (yyval.stmt) = new SkipStmt(); (yyval.stmt)->set_line(yylineno);}
 #line 1936 "parser.cpp"
     break;
 
   case 39: /* simple: atom ":=" expr  */
 #line 218 "parser.y"
-                                                                { (yyval.stmt) = new AssignStmt((yyvsp[-2].expr),(yyvsp[0].expr)); }
+                                                                { (yyval.stmt) = new AssignStmt((yyvsp[-2].expr),(yyvsp[0].expr)); (yyval.stmt)->set_line(yylineno);}
 #line 1942 "parser.cpp"
     break;
 
   case 40: /* simple: atom ":=" "new" type '[' expr ']'  */
 #line 219 "parser.y"
-                                                     { (yyval.stmt) = new ArrayInit((yyvsp[-6].expr),(yyvsp[-3].type),(yyvsp[-1].expr)); }
+                                                     { (yyval.stmt) = new ArrayInit((yyvsp[-6].expr),(yyvsp[-3].type),(yyvsp[-1].expr)); (yyval.stmt)->set_line(yylineno);}
 #line 1948 "parser.cpp"
     break;
 
@@ -1955,7 +1955,7 @@ yyreduce:
 
   case 42: /* simple_list: simple  */
 #line 224 "parser.y"
-                                                                        { (yyval.stmt_list) = new StmtList((yyvsp[0].stmt)); }
+                                                                        { (yyval.stmt_list) = new StmtList((yyvsp[0].stmt)); (yyval.stmt_list)->set_line(yylineno);}
 #line 1960 "parser.cpp"
     break;
 
@@ -1967,13 +1967,13 @@ yyreduce:
 
   case 44: /* call: T_var '(' expr_list ')'  */
 #line 229 "parser.y"
-                                                        { (yyval.call_object) = new CallObject((yyvsp[-3].str),(yyvsp[-1].expr_list)); }
+                                                        { (yyval.call_object) = new CallObject((yyvsp[-3].str),(yyvsp[-1].expr_list)); (yyval.call_object)->set_line(yylineno);}
 #line 1972 "parser.cpp"
     break;
 
   case 45: /* expr_list: %empty  */
 #line 233 "parser.y"
-                                                                { (yyval.expr_list) = new ExprList(); }
+                                                                { (yyval.expr_list) = new ExprList(); (yyval.expr_list)->set_line(yylineno);}
 #line 1978 "parser.cpp"
     break;
 
@@ -1985,7 +1985,7 @@ yyreduce:
 
   case 47: /* expr_head: %empty  */
 #line 238 "parser.y"
-                                                                                { (yyval.expr_list) = new ExprList(); }
+                                                                                { (yyval.expr_list) = new ExprList(); (yyval.expr_list)->set_line(yylineno);}
 #line 1990 "parser.cpp"
     break;
 
@@ -1997,19 +1997,19 @@ yyreduce:
 
   case 49: /* atom: T_var  */
 #line 243 "parser.y"
-                                                                        { (yyval.expr) = new Var((yyvsp[0].str)); }
+                                                                        { (yyval.expr) = new Var((yyvsp[0].str)); (yyval.expr)->set_line(yylineno);}
 #line 2002 "parser.cpp"
     break;
 
   case 50: /* atom: T_constString  */
 #line 244 "parser.y"
-                                                                { (yyval.expr) = new ConstString((yyvsp[0].str)); }
+                                                                { (yyval.expr) = new ConstString((yyvsp[0].str)); (yyval.expr)->set_line(yylineno);}
 #line 2008 "parser.cpp"
     break;
 
   case 51: /* atom: T_var '[' expr ']'  */
 #line 245 "parser.y"
-                                                                { (yyval.expr) = new Var((yyvsp[-3].str),(yyvsp[-1].expr)); }
+                                                                { (yyval.expr) = new Var((yyvsp[-3].str),(yyvsp[-1].expr)); (yyval.expr)->set_line(yylineno);}
 #line 2014 "parser.cpp"
     break;
 
@@ -2027,13 +2027,13 @@ yyreduce:
 
   case 54: /* expr: T_constInt  */
 #line 251 "parser.y"
-                                                                { (yyval.expr) = new ConstInt((yyvsp[0].num)); }
+                                                                { (yyval.expr) = new ConstInt((yyvsp[0].num)); (yyval.expr)->set_line(yylineno);}
 #line 2032 "parser.cpp"
     break;
 
   case 55: /* expr: T_constChar  */
 #line 252 "parser.y"
-                                                                { (yyval.expr) = new ConstChar((yyvsp[0].num)); }
+                                                                { (yyval.expr) = new ConstChar((yyvsp[0].num)); (yyval.expr)->set_line(yylineno);}
 #line 2038 "parser.cpp"
     break;
 
@@ -2045,139 +2045,139 @@ yyreduce:
 
   case 57: /* expr: '+' expr  */
 #line 254 "parser.y"
-                                                        { (yyval.expr) = new BinOp(NULL,'+',(yyvsp[0].expr)); }
+                                                        { (yyval.expr) = new BinOp(NULL,'+',(yyvsp[0].expr)); (yyval.expr)->set_line(yylineno);}
 #line 2050 "parser.cpp"
     break;
 
   case 58: /* expr: '-' expr  */
 #line 255 "parser.y"
-                                                        { (yyval.expr) = new BinOp(NULL,'-',(yyvsp[0].expr)); }
+                                                        { (yyval.expr) = new BinOp(NULL,'-',(yyvsp[0].expr)); (yyval.expr)->set_line(yylineno);}
 #line 2056 "parser.cpp"
     break;
 
   case 59: /* expr: expr '+' expr  */
 #line 256 "parser.y"
-                                                                { (yyval.expr) = new BinOp((yyvsp[-2].expr),'+',(yyvsp[0].expr)); }
+                                                                { (yyval.expr) = new BinOp((yyvsp[-2].expr),'+',(yyvsp[0].expr)); (yyval.expr)->set_line(yylineno);}
 #line 2062 "parser.cpp"
     break;
 
   case 60: /* expr: expr '-' expr  */
 #line 257 "parser.y"
-                                                                { (yyval.expr) = new BinOp((yyvsp[-2].expr),'-',(yyvsp[0].expr)); }
+                                                                { (yyval.expr) = new BinOp((yyvsp[-2].expr),'-',(yyvsp[0].expr)); (yyval.expr)->set_line(yylineno);}
 #line 2068 "parser.cpp"
     break;
 
   case 61: /* expr: expr '*' expr  */
 #line 258 "parser.y"
-                                                                { (yyval.expr) = new BinOp((yyvsp[-2].expr),'*',(yyvsp[0].expr)); }
+                                                                { (yyval.expr) = new BinOp((yyvsp[-2].expr),'*',(yyvsp[0].expr)); (yyval.expr)->set_line(yylineno);}
 #line 2074 "parser.cpp"
     break;
 
   case 62: /* expr: expr '/' expr  */
 #line 259 "parser.y"
-                                                                { (yyval.expr) = new BinOp((yyvsp[-2].expr),'/',(yyvsp[0].expr)); }
+                                                                { (yyval.expr) = new BinOp((yyvsp[-2].expr),'/',(yyvsp[0].expr)); (yyval.expr)->set_line(yylineno);}
 #line 2080 "parser.cpp"
     break;
 
   case 63: /* expr: expr "mod" expr  */
 #line 260 "parser.y"
-                                                                { (yyval.expr) = new BinOp((yyvsp[-2].expr),'%',(yyvsp[0].expr)); }
+                                                                { (yyval.expr) = new BinOp((yyvsp[-2].expr),'%',(yyvsp[0].expr)); (yyval.expr)->set_line(yylineno);}
 #line 2086 "parser.cpp"
     break;
 
   case 64: /* expr: expr '=' expr  */
 #line 261 "parser.y"
-                                                                { (yyval.expr) = new RelOp((yyvsp[-2].expr),eq,(yyvsp[0].expr)); }
+                                                                { (yyval.expr) = new RelOp((yyvsp[-2].expr),eq,(yyvsp[0].expr)); (yyval.expr)->set_line(yylineno);}
 #line 2092 "parser.cpp"
     break;
 
   case 65: /* expr: expr '>' expr  */
 #line 262 "parser.y"
-                                                                { (yyval.expr) = new RelOp((yyvsp[-2].expr),gt,(yyvsp[0].expr)); }
+                                                                { (yyval.expr) = new RelOp((yyvsp[-2].expr),gt,(yyvsp[0].expr)); (yyval.expr)->set_line(yylineno);}
 #line 2098 "parser.cpp"
     break;
 
   case 66: /* expr: expr '<' expr  */
 #line 263 "parser.y"
-                                                                { (yyval.expr) = new RelOp((yyvsp[-2].expr),lt,(yyvsp[0].expr)); }
+                                                                { (yyval.expr) = new RelOp((yyvsp[-2].expr),lt,(yyvsp[0].expr)); (yyval.expr)->set_line(yylineno);}
 #line 2104 "parser.cpp"
     break;
 
   case 67: /* expr: expr "<>" expr  */
 #line 264 "parser.y"
-                                                                { (yyval.expr) = new RelOp((yyvsp[-2].expr),neq,(yyvsp[0].expr)); }
+                                                                { (yyval.expr) = new RelOp((yyvsp[-2].expr),neq,(yyvsp[0].expr)); (yyval.expr)->set_line(yylineno);}
 #line 2110 "parser.cpp"
     break;
 
   case 68: /* expr: expr "<=" expr  */
 #line 265 "parser.y"
-                                                                { (yyval.expr) = new RelOp((yyvsp[-2].expr),le,(yyvsp[0].expr)); }
+                                                                { (yyval.expr) = new RelOp((yyvsp[-2].expr),le,(yyvsp[0].expr)); (yyval.expr)->set_line(yylineno);}
 #line 2116 "parser.cpp"
     break;
 
   case 69: /* expr: expr ">=" expr  */
 #line 266 "parser.y"
-                                                                { (yyval.expr) = new RelOp((yyvsp[-2].expr),ge,(yyvsp[0].expr)); }
+                                                                { (yyval.expr) = new RelOp((yyvsp[-2].expr),ge,(yyvsp[0].expr)); (yyval.expr)->set_line(yylineno);}
 #line 2122 "parser.cpp"
     break;
 
   case 70: /* expr: "true"  */
 #line 267 "parser.y"
-                                                                        { (yyval.expr) = new LogOp(TRUE); }
+                                                                        { (yyval.expr) = new LogOp(TRUE); (yyval.expr)->set_line(yylineno);}
 #line 2128 "parser.cpp"
     break;
 
   case 71: /* expr: "false"  */
 #line 268 "parser.y"
-                                                                        { (yyval.expr) = new LogOp(FALSE); }
+                                                                        { (yyval.expr) = new LogOp(FALSE); (yyval.expr)->set_line(yylineno);}
 #line 2134 "parser.cpp"
     break;
 
   case 72: /* expr: "not" expr  */
 #line 269 "parser.y"
-                                                                { (yyval.expr) = new LogOp(NOT,NULL,(yyvsp[0].expr)); }
+                                                                { (yyval.expr) = new LogOp(NOT,NULL,(yyvsp[0].expr)); (yyval.expr)->set_line(yylineno);}
 #line 2140 "parser.cpp"
     break;
 
   case 73: /* expr: expr "and" expr  */
 #line 270 "parser.y"
-                                                                { (yyval.expr) = new LogOp(AND,(yyvsp[-2].expr),(yyvsp[0].expr)); }
+                                                                { (yyval.expr) = new LogOp(AND,(yyvsp[-2].expr),(yyvsp[0].expr)); (yyval.expr)->set_line(yylineno);}
 #line 2146 "parser.cpp"
     break;
 
   case 74: /* expr: expr "or" expr  */
 #line 271 "parser.y"
-                                                                { (yyval.expr) = new LogOp(OR,(yyvsp[-2].expr),(yyvsp[0].expr)); }
+                                                                { (yyval.expr) = new LogOp(OR,(yyvsp[-2].expr),(yyvsp[0].expr)); (yyval.expr)->set_line(yylineno);}
 #line 2152 "parser.cpp"
     break;
 
   case 75: /* expr: "nil"  */
 #line 273 "parser.y"
-                                                                        { (yyval.expr) = new ListOp(nil,NULL,NULL); }
+                                                                        { (yyval.expr) = new ListOp(nil,NULL,NULL); (yyval.expr)->set_line(yylineno);}
 #line 2158 "parser.cpp"
     break;
 
   case 76: /* expr: "nil?" '(' expr ')'  */
 #line 274 "parser.y"
-                                                        { (yyval.expr) = new ListOp(nilq,NULL,(yyvsp[-1].expr)); }
+                                                        { (yyval.expr) = new ListOp(nilq,NULL,(yyvsp[-1].expr)); (yyval.expr)->set_line(yylineno);}
 #line 2164 "parser.cpp"
     break;
 
   case 77: /* expr: expr '#' expr  */
 #line 275 "parser.y"
-                                                                { (yyval.expr) = new ListOp(append,(yyvsp[-2].expr),(yyvsp[0].expr)); }
+                                                                { (yyval.expr) = new ListOp(append,(yyvsp[-2].expr),(yyvsp[0].expr)); (yyval.expr)->set_line(yylineno);}
 #line 2170 "parser.cpp"
     break;
 
   case 78: /* expr: "head" '(' expr ')'  */
 #line 276 "parser.y"
-                                                        { (yyval.expr) = new ListOp(head,NULL,(yyvsp[-1].expr)); }
+                                                        { (yyval.expr) = new ListOp(head,NULL,(yyvsp[-1].expr)); (yyval.expr)->set_line(yylineno);}
 #line 2176 "parser.cpp"
     break;
 
   case 79: /* expr: "tail" '(' expr ')'  */
 #line 277 "parser.y"
-                                                        { (yyval.expr) = new ListOp(tail,NULL,(yyvsp[-1].expr)); }
+                                                        { (yyval.expr) = new ListOp(tail,NULL,(yyvsp[-1].expr)); (yyval.expr)->set_line(yylineno);}
 #line 2182 "parser.cpp"
     break;
 

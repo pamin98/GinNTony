@@ -20,6 +20,7 @@
 
 void internal (const char * fmt, ...);
 void fatal    (const char * fmt, ...);
+void error    (int line_no, const char * fmt, ...);
 void error    (const char * fmt, ...);
 void warning  (const char * fmt, ...);
 

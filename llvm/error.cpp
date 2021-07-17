@@ -59,6 +59,23 @@ void fatal (const char * fmt, ...)
    exit(1);
 }
 
+void error (int line_no, const char * fmt, ...)
+{
+   va_list ap;
+
+   va_start(ap, fmt);
+   if (fmt[0] == '\r')
+      fmt++;
+   else
+      fprintf(stderr, "%s:%d: ", filename, line_no);
+      // fprintf(stderr, "%s:%d: ", filename, yylineno);
+   fprintf(stderr, "Error, ");
+   vfprintf(stderr, fmt, ap);
+   fprintf(stderr, "\n");
+   va_end(ap);
+   exit(1);
+}
+
 void error (const char * fmt, ...)
 {
    va_list ap;

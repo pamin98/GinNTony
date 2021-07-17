@@ -136,12 +136,12 @@ void openScope()
     currentScope = newScope;
 }
 
-void closeScope()
+void closeScope(int line_no)
 {
     SymbolEntry *e = currentScope->entries;
     Scope *t = currentScope;
 
-    checkDeclares(e);
+    checkDeclares(e, line_no);
 
     while (e != NULL)
     {
@@ -164,14 +164,14 @@ static void insertEntry(SymbolEntry *e)
     currentScope->entries = e;
 }
 
-static SymbolEntry *newEntry(const char *name)
+static SymbolEntry *newEntry(const char *name, int line_no)
 {
     SymbolEntry *e;
 
     for (e = currentScope->entries; e != NULL; e = e->nextInScope)
         if (strcmp(name, e->id) == 0)
         {
-            error("Duplicate identifier: %s", name);
+            error(line_no, "Duplicate identifier: %s", name);
             return NULL;
         }
 
@@ -185,9 +185,9 @@ static SymbolEntry *newEntry(const char *name)
     return e;
 }
 
-SymbolEntry *newVariable(const char *name, Type type)
+SymbolEntry *newVariable(const char *name, Type type, int line_no)
 {
-    SymbolEntry *e = newEntry(name);
+    SymbolEntry *e = newEntry(name, line_no);
 
     if (e != NULL)
     {
@@ -200,7 +200,7 @@ SymbolEntry *newVariable(const char *name, Type type)
     return e;
 }
 
-SymbolEntry *newConstant(const char *name, Type type, ...)
+SymbolEntry *newConstant(int line_no, const char *name, Type type, ...)
 {
     SymbolEntry *e;
     va_list ap;
@@ -254,10 +254,10 @@ SymbolEntry *newConstant(const char *name, Type type, ...)
         default:
             internal("Invalid type for constant");
         }
-        e = newEntry(buffer);
+        e = newEntry(buffer, line_no);
     }
     else
-        e = newEntry(name);
+        e = newEntry(name, line_no);
 
     if (e != NULL)
     {
@@ -282,13 +282,13 @@ SymbolEntry *newConstant(const char *name, Type type, ...)
     return e;
 }
 
-SymbolEntry *newFunction(const char *name)
+SymbolEntry *newFunction(const char *name, int line_no)
 {
-    SymbolEntry *e = lookupEntry(name, LOOKUP_CURRENT_SCOPE, false);
+    SymbolEntry *e = lookupEntry(name, LOOKUP_CURRENT_SCOPE, false, line_no);
 
     if (e == NULL)
     {
-        e = newEntry(name);
+        e = newEntry(name, line_no);
         if (e != NULL)
         {
             e->entryType = ENTRY_FUNCTION;
@@ -308,13 +308,13 @@ SymbolEntry *newFunction(const char *name)
     }
     else
     {
-        error("Duplicate identifier: %s", name);
+        error(line_no, "Duplicate identifier: %s", name);
         return NULL;
     }
 }
 
 SymbolEntry *newParameter(const char *name, Type type,
-                          PassMode mode, SymbolEntry *f)
+                          PassMode mode, SymbolEntry *f, int line_no)
 {
     SymbolEntry *e;
 
@@ -323,7 +323,7 @@ SymbolEntry *newParameter(const char *name, Type type,
     switch (f->eFunction.pardef)
     {
     case PARDEF_DEFINE:
-        e = newEntry(name);
+        e = newEntry(name, line_no);
         if (e != NULL)
         {
             e->entryType = ENTRY_PARAMETER;
@@ -347,19 +347,19 @@ SymbolEntry *newParameter(const char *name, Type type,
         else
             e = e->eParameter.next;
         if (e == NULL)
-            error("More parameters than expected in redeclaration "
+            error(line_no, "More parameters than expected in redeclaration "
                   "of function %s",
                   f->id);
         else if (!equalType(e->eParameter.type, type))
-            error("Parameter type mismatch in redeclaration "
+            error(line_no, "Parameter type mismatch in redeclaration "
                   "of function %s",
                   f->id);
         else if (e->eParameter.mode != mode)
-            error("Parameter passing mode mismatch in redeclaration "
+            error(line_no, "Parameter passing mode mismatch in redeclaration "
                   "of function %s",
                   f->id);
         else if (strcmp(e->id, name) != 0)
-            error("Parameter name mismatch in redeclaration "
+            error(line_no, "Parameter name mismatch in redeclaration "
                   "of function %s",
                   f->id);
         else
@@ -395,7 +395,7 @@ void declareFunction(SymbolEntry *f)
     f->eFunction.isForward = true;
 }
 
-void endFunctionHeader(SymbolEntry *f, Type type)
+void endFunctionHeader(SymbolEntry *f, Type type, int line_no)
 {
     if (f->entryType != ENTRY_FUNCTION)
         internal("Cannot end parameters in a non-function");
@@ -414,11 +414,11 @@ void endFunctionHeader(SymbolEntry *f, Type type)
              f->eFunction.lastArgument->eParameter.next != NULL) ||
             (f->eFunction.lastArgument == NULL &&
              f->eFunction.firstArgument != NULL))
-            error("Fewer parameters than expected in redeclaration "
+            error(line_no, "Fewer parameters than expected in redeclaration "
                   "of function %s",
                   f->id);
         if (!equalType(f->eFunction.resultType, type))
-            error("Result type mismatch in redeclaration of function %s",
+            error(line_no, "Result type mismatch in redeclaration of function %s",
                   f->id);
         break;
     }
@@ -426,13 +426,13 @@ void endFunctionHeader(SymbolEntry *f, Type type)
     currentScope->returnType = type;
 }
 
-SymbolEntry *newTemporary(Type type)
+SymbolEntry *newTemporary(Type type, int line_no)
 {
     char buffer[10];
     SymbolEntry *e;
 
     sprintf(buffer, "$%d", tempNumber);
-    e = newEntry(buffer);
+    e = newEntry(buffer, line_no);
 
     if (e != NULL)
     {
@@ -482,7 +482,7 @@ void destroyEntry(SymbolEntry *e)
     delete (e);
 }
 
-SymbolEntry *lookupEntry(const char *name, LookupType type, bool err)
+SymbolEntry *lookupEntry(const char *name, LookupType type, bool err, int line_no)
 {
     unsigned int hashValue = PJW_hash(name) % hashTableSize;
     SymbolEntry *e = hashTable[hashValue];
@@ -506,7 +506,7 @@ SymbolEntry *lookupEntry(const char *name, LookupType type, bool err)
     }
 
     if (err)
-        error("Unknown identifier: %s", name);
+        error(line_no, "Unknown identifier: %s", name);
     return NULL;
 }
 
@@ -678,7 +678,7 @@ const char *TypeToStr(Type type)
     return "undefined";
 }
 
-void checkDeclares(SymbolEntry *e)
+void checkDeclares(SymbolEntry *e, int line_no)
 {
     SymbolEntry *entries;
 
@@ -687,7 +687,7 @@ void checkDeclares(SymbolEntry *e)
     while(entries != NULL)
     {
         if(entries->entryType==ENTRY_FUNCTION && entries->eFunction.isForward)
-            error("Function %s declared but not defined.",entries->id);
+            error(line_no, "Function %s declared but not defined.",entries->id);
         entries = entries->nextInScope;
     }
 

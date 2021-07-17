@@ -137,18 +137,18 @@ void            initSymbolTable     (unsigned int size);
 void            destroySymbolTable  (void);
 
 void            openScope           (void);
-void            closeScope          (void);
+void            closeScope          (int line_no);
 
-SymbolEntry *   newVariable         (const char *name, Type type);
-SymbolEntry *   newConstant         (const char *name, Type type, ...);
-SymbolEntry *   newFunction         (const char *name);
-SymbolEntry *   newParameter        (const char *name, Type type, PassMode mode, SymbolEntry *f);
-SymbolEntry *   newTemporary        (Type type);
+SymbolEntry *   newVariable         (const char *name, Type type, int line_no);
+SymbolEntry *   newConstant         (int line_no, const char *name, Type type, ...);
+SymbolEntry *   newFunction         (const char *name, int line_no);
+SymbolEntry *   newParameter        (const char *name, Type type, PassMode mode, SymbolEntry *f, int line_no);
+SymbolEntry *   newTemporary        (Type type, int line_no);
 
 void            declareFunction     (SymbolEntry *f);
-void            endFunctionHeader   (SymbolEntry *f, Type type);
+void            endFunctionHeader   (SymbolEntry *f, Type type, int line_no);
 void            destroyEntry        (SymbolEntry *e);
-SymbolEntry *   lookupEntry         (const char *name, LookupType type, bool err);
+SymbolEntry *   lookupEntry         (const char *name, LookupType type, bool err, int line_no);
 
 Type            typeArray           (RepInteger size, Type refType);
 Type            typeIArray          (Type refType);
@@ -159,6 +159,6 @@ bool            equalType           (Type type1, Type type2);
 void            printType           (Type type);
 void            printMode           (PassMode mode);
 const char *    TypeToStr           (Type type);
-void            checkDeclares       (SymbolEntry *e);
+void            checkDeclares       (SymbolEntry *e, int line_no);
 
 #endif

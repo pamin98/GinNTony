@@ -132,52 +132,52 @@ program:
 		;
 
 func_def:
-		"def" header_def ':' definition_list stmt_list "end"	{ $$ = new FunctionDefinition($2,$4,$5); }
+		"def" header_def ':' definition_list stmt_list "end"	{ $$ = new FunctionDefinition($2,$4,$5); $$->set_line(yylineno); }
 		;
 
 func_decl:
-		"decl" header_decl				{ $$ = new FunctionDeclaration($2); }
+		"decl" header_decl				{ $$ = new FunctionDeclaration($2); $$->set_line(yylineno); }
 		;
 
 definition_list:
-										{ $$ = new DefinitionList(); }
+										{ $$ = new DefinitionList(); $$->set_line(yylineno);}
 		| definition_list func_def 		{ $1->append($2); $$=$1; }
 		| definition_list func_decl 	{ $1->append($2); $$=$1; }
 		| definition_list var_def 		{ $1->append($2); $$=$1; }
 		;
 
 stmt_list:
-			stmt						{ $$ = new StmtList($1); }
+			stmt						{ $$ = new StmtList($1); $$->set_line(yylineno);}
 		|	stmt_list stmt				{ $1->append($2); $$=$1; }
 		;
 
 header_def:
-		  T_var '(' formal_list ')'			{ $$ = new Header($1, $3, typeVoid, Func_Def); }
-		| type T_var '(' formal_list ')'	{ $$ = new Header($2, $4, $1, Func_Def); }
+		  T_var '(' formal_list ')'			{ $$ = new Header($1, $3, typeVoid, Func_Def); $$->set_line(yylineno);}
+		| type T_var '(' formal_list ')'	{ $$ = new Header($2, $4, $1, Func_Def); $$->set_line(yylineno);}
 		;
 
 header_decl:
-		  T_var '(' formal_list ')'			{ $$ = new Header($1, $3, typeVoid, Func_Decl); }
-		| type T_var '(' formal_list ')'	{ $$ = new Header($2, $4, $1, Func_Decl); }
+		  T_var '(' formal_list ')'			{ $$ = new Header($1, $3, typeVoid, Func_Decl); $$->set_line(yylineno);}
+		| type T_var '(' formal_list ')'	{ $$ = new Header($2, $4, $1, Func_Decl); $$->set_line(yylineno);}
 		;
 
 formal_list:
-										{ $$ = new FormalList(); }
+										{ $$ = new FormalList(); $$->set_line(yylineno);}
 		|	formal_head formal 			{ $1->append($2) ; $$ = $1; }
 		;
 
 formal_head:
-		  								{ $$ = new FormalList(); }
+		  								{ $$ = new FormalList(); $$->set_line(yylineno);}
 		| formal_head formal ';' 		{ $1->append($2); $$ = $1; }
 		;
 
 formal:
-		  type var_list					{ $$ = new Formal($1,$2); }
-		| "ref" type var_list 			{ $$ = new Formal($2,$3,true); }
+		  type var_list					{ $$ = new Formal($1,$2); $$->set_line(yylineno);}
+		| "ref" type var_list 			{ $$ = new Formal($2,$3,true); $$->set_line(yylineno);}
 		; 
 
 var_list:
-			T_var 						{ $$ = new VarList($1); }
+			T_var 						{ $$ = new VarList($1); $$->set_line(yylineno);}
 		|	var_list ',' T_var			{ $1->append($3); $$ = $1; }
 	; 
 
@@ -191,90 +191,90 @@ type:
 
 
 var_def:
-		type var_list					{ $$ = new VarDefinition($1,$2); }
+		type var_list					{ $$ = new VarDefinition($1,$2); $$->set_line(yylineno);}
 		;
 
 
 stmt:
 		  simple															{ $$ = $1; }
-		| "exit" 															{ $$ = new ExitStmt(); }
-		| "return" expr 													{ $$ = new ReturnStmt($2); }
-		| "if" expr ':' stmt_list elsif_list "end" 							{ $$ = new If($2,$4,$5); }	
-		| "for" simple_list ';' expr ';' simple_list ':' stmt_list "end"	{ $$ = new For($2,$4,$6,$8); }
+		| "exit" 															{ $$ = new ExitStmt(); $$->set_line(yylineno);}
+		| "return" expr 													{ $$ = new ReturnStmt($2); $$->set_line(yylineno);}
+		| "if" expr ':' stmt_list elsif_list "end" 							{ $$ = new If($2,$4,$5); $$->set_line(yylineno);}	
+		| "for" simple_list ';' expr ';' simple_list ':' stmt_list "end"	{ $$ = new For($2,$4,$6,$8); $$->set_line(yylineno);}
 		;
 
 elsif_list:
 			else									{ $$ = $1; }
-		|	"elsif" expr ':' stmt_list elsif_list	{ $$ = new If($2,$4,$5); }
+		|	"elsif" expr ':' stmt_list elsif_list	{ $$ = new If($2,$4,$5); $$->set_line(yylineno);}
 		;
 
 else:
 		/* nothing */					{ $$ = NULL; }
-		| "else" ':' stmt_list			{ $$ = new If(NULL,$3,NULL); }
+		| "else" ':' stmt_list			{ $$ = new If(NULL,$3,NULL); $$->set_line(yylineno);}
 		;
 
 simple:
-		  "skip"						{ $$ = new SkipStmt(); }
-		| atom ":=" expr				{ $$ = new AssignStmt($1,$3); }
-		| atom ":="  "new" type '[' expr ']' { $$ = new ArrayInit($1,$4,$6); }
+		  "skip"						{ $$ = new SkipStmt(); $$->set_line(yylineno);}
+		| atom ":=" expr				{ $$ = new AssignStmt($1,$3); $$->set_line(yylineno);}
+		| atom ":="  "new" type '[' expr ']' { $$ = new ArrayInit($1,$4,$6); $$->set_line(yylineno);}
 		| call							{ $$ = $1; }
 		;
 
 simple_list:
-			simple						{ $$ = new StmtList($1); }
+			simple						{ $$ = new StmtList($1); $$->set_line(yylineno);}
 		|	simple_list ',' simple		{ $1->append($3); $$ = $1; }
 	;
 
 call:
-		T_var '(' expr_list ')' 		{ $$ = new CallObject($1,$3); }
+		T_var '(' expr_list ')' 		{ $$ = new CallObject($1,$3); $$->set_line(yylineno);}
 		;
 
 expr_list:
-		/* nothing */ 					{ $$ = new ExprList(); }
+		/* nothing */ 					{ $$ = new ExprList(); $$->set_line(yylineno);}
 		| expr_head expr				{ $1->append($2); $$ = $1; }
 		;
 
 expr_head:
-		 								{ $$ = new ExprList(); }
+		 								{ $$ = new ExprList(); $$->set_line(yylineno);}
 		| expr_head expr ',' 			{ $1->append($2); $$ = $1; }
 		;
 
 atom:
-		  T_var							{ $$ = new Var($1); }
-		| T_constString					{ $$ = new ConstString($1); }
-		| T_var '[' expr ']'				{ $$ = new Var($1,$3); }		
+		  T_var							{ $$ = new Var($1); $$->set_line(yylineno);}
+		| T_constString					{ $$ = new ConstString($1); $$->set_line(yylineno);}
+		| T_var '[' expr ']'				{ $$ = new Var($1,$3); $$->set_line(yylineno);}		
 		| call							{ $$ = $1; }
 		;
 
 expr:
 		  atom						  	{ $$ = $1; }
-		| T_constInt					{ $$ = new ConstInt($1); }
-		| T_constChar					{ $$ = new ConstChar($1); }
+		| T_constInt					{ $$ = new ConstInt($1); $$->set_line(yylineno);}
+		| T_constChar					{ $$ = new ConstChar($1); $$->set_line(yylineno);}
 		| '(' expr ')'					{ $$ = $2; }
-		| '+' expr %prec UPLUS			{ $$ = new BinOp(NULL,'+',$2); }
-		| '-' expr %prec UMINUS			{ $$ = new BinOp(NULL,'-',$2); }
-		| expr '+' expr					{ $$ = new BinOp($1,'+',$3); }
-		| expr '-' expr					{ $$ = new BinOp($1,'-',$3); }
-		| expr '*' expr					{ $$ = new BinOp($1,'*',$3); }
-		| expr '/' expr					{ $$ = new BinOp($1,'/',$3); }
-		| expr "mod" expr				{ $$ = new BinOp($1,'%',$3); }
-		| expr '=' expr					{ $$ = new RelOp($1,eq,$3); }
-		| expr '>' expr					{ $$ = new RelOp($1,gt,$3); }
-		| expr '<' expr					{ $$ = new RelOp($1,lt,$3); }
-		| expr "<>" expr				{ $$ = new RelOp($1,neq,$3); }
-		| expr "<=" expr				{ $$ = new RelOp($1,le,$3); }
-		| expr ">=" expr				{ $$ = new RelOp($1,ge,$3); }
-		| "true"						{ $$ = new LogOp(TRUE); }
-		| "false"						{ $$ = new LogOp(FALSE); }
-		| "not" expr					{ $$ = new LogOp(NOT,NULL,$2); }
-		| expr "and" expr				{ $$ = new LogOp(AND,$1,$3); }
-		| expr "or" expr				{ $$ = new LogOp(OR,$1,$3); }
-		//| "new" type '[' expr ']' 		{ $$ = new ArrayInit($2,$4); }
-		| "nil"							{ $$ = new ListOp(nil,NULL,NULL); }
-		| "nil?" '(' expr ')'			{ $$ = new ListOp(nilq,NULL,$3); }
-		| expr '#' expr					{ $$ = new ListOp(append,$1,$3); }
-		| "head" '(' expr ')'			{ $$ = new ListOp(head,NULL,$3); }
-		| "tail" '(' expr ')'			{ $$ = new ListOp(tail,NULL,$3); }
+		| '+' expr %prec UPLUS			{ $$ = new BinOp(NULL,'+',$2); $$->set_line(yylineno);}
+		| '-' expr %prec UMINUS			{ $$ = new BinOp(NULL,'-',$2); $$->set_line(yylineno);}
+		| expr '+' expr					{ $$ = new BinOp($1,'+',$3); $$->set_line(yylineno);}
+		| expr '-' expr					{ $$ = new BinOp($1,'-',$3); $$->set_line(yylineno);}
+		| expr '*' expr					{ $$ = new BinOp($1,'*',$3); $$->set_line(yylineno);}
+		| expr '/' expr					{ $$ = new BinOp($1,'/',$3); $$->set_line(yylineno);}
+		| expr "mod" expr				{ $$ = new BinOp($1,'%',$3); $$->set_line(yylineno);}
+		| expr '=' expr					{ $$ = new RelOp($1,eq,$3); $$->set_line(yylineno);}
+		| expr '>' expr					{ $$ = new RelOp($1,gt,$3); $$->set_line(yylineno);}
+		| expr '<' expr					{ $$ = new RelOp($1,lt,$3); $$->set_line(yylineno);}
+		| expr "<>" expr				{ $$ = new RelOp($1,neq,$3); $$->set_line(yylineno);}
+		| expr "<=" expr				{ $$ = new RelOp($1,le,$3); $$->set_line(yylineno);}
+		| expr ">=" expr				{ $$ = new RelOp($1,ge,$3); $$->set_line(yylineno);}
+		| "true"						{ $$ = new LogOp(TRUE); $$->set_line(yylineno);}
+		| "false"						{ $$ = new LogOp(FALSE); $$->set_line(yylineno);}
+		| "not" expr					{ $$ = new LogOp(NOT,NULL,$2); $$->set_line(yylineno);}
+		| expr "and" expr				{ $$ = new LogOp(AND,$1,$3); $$->set_line(yylineno);}
+		| expr "or" expr				{ $$ = new LogOp(OR,$1,$3); $$->set_line(yylineno);}
+		//| "new" type '[' expr ']' 		{ $$ = new ArrayInit($2,$4); $$->set_line(yylineno);}
+		| "nil"							{ $$ = new ListOp(nil,NULL,NULL); $$->set_line(yylineno);}
+		| "nil?" '(' expr ')'			{ $$ = new ListOp(nilq,NULL,$3); $$->set_line(yylineno);}
+		| expr '#' expr					{ $$ = new ListOp(append,$1,$3); $$->set_line(yylineno);}
+		| "head" '(' expr ')'			{ $$ = new ListOp(head,NULL,$3); $$->set_line(yylineno);}
+		| "tail" '(' expr ')'			{ $$ = new ListOp(tail,NULL,$3); $$->set_line(yylineno);}
 		;	
 
 %%
