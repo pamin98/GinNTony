@@ -135,6 +135,7 @@ extern const Type typeNil;
 
 void            initSymbolTable     (unsigned int size);
 void            destroySymbolTable  (void);
+void            initPreBuiltFunctionsInST ();
 
 void            openScope           (void);
 void            closeScope          (int line_no);

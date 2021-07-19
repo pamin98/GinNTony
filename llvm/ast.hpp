@@ -275,8 +275,11 @@ public:
 	{
 		if (type == NULL)
 			sem();
-		if (!equalType(t, type))
+		if (!equalType(t, type)){
+			if((t->dtype == TYPE_LIST && type->dtype == TYPE_NIL) || (t->dtype == TYPE_NIL && type->dtype == TYPE_LIST))
+				return;
 			error(this->semantic_line_no, "Invalid type of operand. Expected %s, found %s.", TypeToStr(t), TypeToStr(type));
+		}
 	}
 
 	Type getType()
@@ -288,8 +291,13 @@ public:
 
 	virtual void checkLVal() {}
 
+	bool checkVar() {
+		return isVar;
+	}
+
 protected:
 	Type type;
+	bool isVar = false;
 };
 
 class Stmt : public AST
@@ -331,24 +339,25 @@ private:
 class Var : public Expr
 {
 public:
-	Var(const char *v, Expr *i = NULL) : var(v), index(i) {}
+	Var(const char *v, Expr *i = NULL) : var(v), index(i) {
+		isVar = true;
+	}
 
 	virtual void sem() override
 	{
-		SymbolEntry *e = lookupEntry(var, LOOKUP_ALL_SCOPES, true, this->semantic_line_no);
+		SymbolEntry *e = lookupEntry(var, LOOKUP_ALL_SCOPES, true, this->semantic_line_no); 
 		if (e->entryType == ENTRY_FUNCTION)
 			error(this->semantic_line_no, "%s is a function, expected parenthesis", e->id);
 		type = e->eVariable.type;
 
-		if (index != NULL && index->getType()->dtype != TYPE_INTEGER)
-			error(this->semantic_line_no, "Array index must be of type integer.");
-
-		if (index != NULL && this->getType()->dtype != TYPE_IARRAY)
-			error(this->semantic_line_no, "Expected array, found %s", TypeToStr(this->getType()));
-		
-		if (index != NULL)
+		if (index != NULL){
+			index->sem();
+			if (index->getType()->dtype != TYPE_INTEGER)
+				error(this->semantic_line_no, "Array index must be of type integer.");
+			if (this->getType()->dtype != TYPE_IARRAY)
+				error(this->semantic_line_no, "Expected array, found %s", TypeToStr(this->getType()));
 			type = type->refType;
-
+		}
 	}
 
 	bool isArrayIndexing()
@@ -843,41 +852,6 @@ public:
 
 	virtual void sem() override
 	{
-		if( strcmp(functionName,"geti") == 0 )
-			this->type = new Type_tag{ TYPE_INTEGER, 0 , 0 , 0 };
-		else if( strcmp(functionName,"getb") == 0 )
-			this->type = new Type_tag{ TYPE_BOOLEAN, 0 , 0 , 0 };
-		else if( strcmp(functionName,"getc") == 0 )
-			this->type = new Type_tag{ TYPE_CHAR, 0 , 0 , 0 };
-		else if( strcmp(functionName,"gets") == 0 )
-			this->type = new Type_tag{ TYPE_IARRAY, new Type_tag{TYPE_CHAR,0,0,0} , 0 , 0 };
-		else if( strcmp(functionName,"abs") == 0 )
-			this->type = new Type_tag{ TYPE_INTEGER, 0 , 0 , 0 };
-		else if( strcmp(functionName,"ord") == 0 )
-			this->type = new Type_tag{ TYPE_INTEGER, 0 , 0 , 0 };
-		else if( strcmp(functionName,"chr") == 0 )
-			this->type = new Type_tag{ TYPE_CHAR, 0 , 0 , 0 };
-		else if( strcmp(functionName,"strlen") == 0 )
-			this->type = new Type_tag{ TYPE_INTEGER, 0 , 0 , 0 };
-		else if( strcmp(functionName,"strcmp") == 0 )
-			this->type = new Type_tag{ TYPE_INTEGER, 0 , 0 , 0 };
-
-		if( strcmp(functionName,"puti") == 0 || strcmp(functionName,"putb") == 0 || strcmp(functionName,"putc") == 0 || strcmp(functionName,"puts") == 0 )
-		{
-			return;
-		}
-		if( strcmp(functionName,"geti") == 0 || strcmp(functionName,"getb") == 0 || strcmp(functionName,"getc") == 0 || strcmp(functionName,"gets") == 0 )
-		{
-			return;
-		}
-		if( strcmp(functionName,"abs") == 0 || strcmp(functionName,"ord") == 0 || strcmp(functionName,"chr") == 0 )
-		{
-			return;
-		}
-		if( strcmp(functionName,"strlen") == 0 || strcmp(functionName,"strcmp") == 0 || strcmp(functionName,"strcpy") == 0 || strcmp(functionName,"strcat") == 0 )
-		{
-			return;
-		}
 		this->expr_list->sem();
 		int functionArguments = 0;
 		bool argMismatch = false;
@@ -900,6 +874,8 @@ public:
 			}
 			// if expression is not variable and mode is reference error
 			e->type_check(paramType);
+			if(!e->checkVar() && args->eParameter.mode == PASS_BY_REFERENCE && (paramType == typeInteger || paramType == typeBoolean || paramType == typeChar))
+				error(this->semantic_line_no, "Only variables can be passed by reference.");
 			args = args->eParameter.next;
 		}
 		if (argMismatch)
@@ -1044,10 +1020,13 @@ public:
 	}
 
 	virtual void sem() override
-	{
+	{	
+		right->sem();
 		right->type_check(typeInteger);
-		if (left != NULL)
+		if (left != NULL){
+			left->sem();
 			left->type_check(typeInteger);
+		}
 		type = typeInteger;
 	}
 
@@ -1158,10 +1137,13 @@ public:
 		case FALSE:
 			break;
 		case NOT:
+			right->sem();
 			right->type_check(typeBoolean);
 			break;
 		case AND:
 		case OR:
+			right->sem();
+			left->sem();
 			right->type_check(typeBoolean);
 			left->type_check(typeBoolean);
 		}
@@ -1216,21 +1198,26 @@ public:
 			type = typeNil;
 			break;
 		case head:
+			right->sem();
 			if (right->getType()->dtype != TYPE_LIST)
 				error(this->semantic_line_no, "Expected list, found %s.", TypeToStr(right->getType()));
 			type = right->getType()->refType;
 			break;
 		case tail:
+			right->sem();
 			if (right->getType()->dtype != TYPE_LIST)
 				error(this->semantic_line_no, "Expected list, found %s.", TypeToStr(right->getType()));
 			type = right->getType();
 			break;
 		case nilq:
+			right->sem();
 			if (right->getType()->dtype != TYPE_LIST && right->getType()->dtype != TYPE_NIL)
 				error(this->semantic_line_no, "Expected list, found %s.", TypeToStr(right->getType()));
 			type = typeBoolean;
 			break;
 		case append:
+			right->sem();
+			left->sem();
 			if (right->getType()->dtype == TYPE_NIL)
 			{
 				type = typeList(left->getType());
@@ -1307,7 +1294,7 @@ private:
 class ArrayInit : public Stmt
 {
 public:
-	ArrayInit(Expr *name, Type t, Expr *e) : variable(dynamic_cast<Var *>(name)), refT(t), expr(e){};
+	ArrayInit(Expr *name, Type t, Expr *e) : helper(name), variable(dynamic_cast<Var *>(name)), refT(t), expr(e){};
 	~ArrayInit()
 	{
 		delete variable;
@@ -1318,6 +1305,7 @@ public:
 
 	virtual void sem() override
 	{
+		helper->checkLVal();
 		this->variable->sem();
 		this->expr->sem();
 		if (refT->dtype != TYPE_INTEGER && refT->dtype != TYPE_BOOLEAN && refT->dtype != TYPE_CHAR)
@@ -1350,6 +1338,7 @@ public:
 	}
 
 private:
+	Expr *helper;
 	Type type;
 	Var *variable;
 	Type refT;
@@ -1359,7 +1348,7 @@ private:
 class AssignStmt : public Stmt
 {
 public:
-	AssignStmt(Expr *l, Expr *r) : left(dynamic_cast<Var *>(l)), right(r) {}
+	AssignStmt(Expr *l, Expr *r) : helper(l), left(dynamic_cast<Var *>(l)), right(r) {}
 	~AssignStmt()
 	{
 		delete left;
@@ -1368,7 +1357,9 @@ public:
 
 	virtual void sem() override
 	{
-		left->checkLVal();
+		helper->checkLVal();
+		left->sem();
+		right->sem();
 		Type ltype = left->getType();
 		right->type_check(ltype);
 	}
@@ -1417,6 +1408,7 @@ public:
 	}
 
 private:
+	Expr *helper;
 	Var *left;
 	Expr *right;
 };
@@ -1444,9 +1436,13 @@ public:
 	virtual void sem()
 	{
 		Type returnType = currentScope->returnType;
+		returnExpr->sem();
 		Type exprType = returnExpr->getType();
-		if (!equalType(exprType, returnType))
+		if (!equalType(exprType, returnType)){
+			if (returnType->dtype == TYPE_LIST && exprType->dtype == TYPE_NIL)
+				return;
 			error(this->semantic_line_no, "Invalid type of return expression: Expected %s, found %s.", TypeToStr(returnType), TypeToStr(exprType));
+		}
 	}
 
 	virtual llvm::Value *codegen() override

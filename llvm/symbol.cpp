@@ -106,7 +106,103 @@ void initSymbolTable(unsigned int size)
     hashTable = (SymbolEntry **)allocate(size * sizeof(SymbolEntry *));
 
     for (i = 0; i < size; i++)
-        hashTable[i] = NULL;
+        hashTable[i] = NULL;   
+}
+
+void initPreBuiltFunctionsInST()
+{
+    SymbolEntry *puti = newFunction("puti", 1);
+    openScope();
+    newParameter("n", typeInteger, PASS_BY_VALUE, puti, 1);
+    endFunctionHeader(puti, typeVoid, 1);
+    closeScope(1);
+
+    SymbolEntry *putb = newFunction("putb", 1);
+    openScope();
+    newParameter("b", typeBoolean, PASS_BY_VALUE, putb, 1);
+    endFunctionHeader(putb, typeVoid, 1);
+    closeScope(1);
+
+    SymbolEntry *putc = newFunction("putc", 1);
+    openScope();
+    newParameter("c", typeChar, PASS_BY_VALUE, putc, 1);
+    endFunctionHeader(putc, typeVoid, 1);
+    closeScope(1);
+
+    SymbolEntry *puts = newFunction("puts", 1);
+    openScope();
+    newParameter("s", new Type_tag{TYPE_IARRAY, typeChar, 0, 0}, PASS_BY_REFERENCE, puts, 1);
+    endFunctionHeader(puts, typeVoid, 1);
+    closeScope(1);
+
+    SymbolEntry *geti = newFunction("geti", 1);
+    openScope();
+    endFunctionHeader(geti, typeInteger, 1);
+    closeScope(1);
+
+    SymbolEntry *getb = newFunction("getb", 1);
+    openScope();
+    endFunctionHeader(getb, typeBoolean, 1);
+    closeScope(1);
+
+    SymbolEntry *getc = newFunction("getc", 1);
+    openScope();
+    endFunctionHeader(getc, typeChar, 1);
+    closeScope(1);
+
+    SymbolEntry *gets = newFunction("gets", 1);
+    openScope();
+    newParameter("n", typeInteger, PASS_BY_VALUE, gets, 1);
+    newParameter("s", new Type_tag{TYPE_IARRAY, typeChar, 0, 0}, PASS_BY_REFERENCE, gets, 1);
+    endFunctionHeader(gets, typeVoid, 1);
+    closeScope(1);
+
+    SymbolEntry *abs = newFunction("abs", 1);
+    openScope();
+    newParameter("n", typeInteger, PASS_BY_VALUE, abs, 1);
+    endFunctionHeader(abs, typeInteger, 1);
+    closeScope(1);
+
+    SymbolEntry *ord = newFunction("ord", 1);
+    openScope();
+    newParameter("c", typeChar, PASS_BY_VALUE, ord, 1);
+    endFunctionHeader(ord, typeInteger, 1);
+    closeScope(1);
+
+    SymbolEntry *chr = newFunction("chr", 1);
+    openScope();
+    newParameter("n", typeInteger, PASS_BY_VALUE, chr, 1);
+    endFunctionHeader(chr, typeChar, 1);
+    closeScope(1);
+
+    SymbolEntry *strlen = newFunction("strlen", 1);
+    openScope();
+    newParameter("s", new Type_tag{TYPE_IARRAY, typeChar, 0, 0}, PASS_BY_REFERENCE, strlen, 1);
+    endFunctionHeader(strlen, typeInteger, 1);
+    closeScope(1);
+
+    SymbolEntry *strcmp = newFunction("strcmp", 1);
+    openScope();
+    newParameter("s1", new Type_tag{TYPE_IARRAY, typeChar, 0, 0}, PASS_BY_REFERENCE, strcmp, 1);
+    newParameter("s2", new Type_tag{TYPE_IARRAY, typeChar, 0, 0}, PASS_BY_REFERENCE, strcmp, 1);
+    endFunctionHeader(strcmp, typeInteger, 1);
+    closeScope(1);
+
+    SymbolEntry *strcpy = newFunction("strcpy", 1);
+    openScope();
+    newParameter("trg", new Type_tag{TYPE_IARRAY, typeChar, 0, 0}, PASS_BY_REFERENCE, strcpy, 1);
+    newParameter("src", new Type_tag{TYPE_IARRAY, typeChar, 0, 0}, PASS_BY_REFERENCE, strcpy, 1);
+    endFunctionHeader(strcpy, typeVoid, 1);
+    closeScope(1);
+
+    SymbolEntry *strcat = newFunction("strcat", 1);
+    openScope();
+    newParameter("trg", new Type_tag{TYPE_IARRAY, typeChar, 0, 0}, PASS_BY_REFERENCE, strcat, 1);
+    newParameter("src", new Type_tag{TYPE_IARRAY, typeChar, 0, 0}, PASS_BY_REFERENCE, strcat, 1);
+    endFunctionHeader(strcat, typeVoid, 1);
+    closeScope(1);
+
+    return;
 }
 
 void destroySymbolTable()

@@ -287,6 +287,7 @@ int main(int argc, char *argv[])
 	yyin = fopen(argv[1],"r");
 	initSymbolTable(ST_SIZE);
 	openScope();
+	initPreBuiltFunctionsInST();
 	int result = yyparse();
 	destroySymbolTable();
 	fclose(yyin);
