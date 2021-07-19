@@ -40,6 +40,10 @@ void ActivationRecord::addVar(std::string name, Type type, PassMode mode) {
     varTypes[name] = translateType(type, mode);
 }
 
+void ActivationRecord::addVar(std::string name, llvm::Type *type) {
+    varTypes[name] = type;
+}
+
 void ActivationRecord::addVal(std::string name, llvm::Value *val) {
     this->varValues[name] = val;
 }

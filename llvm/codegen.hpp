@@ -37,6 +37,7 @@ class ActivationRecord
 
         void addArg(std::string name, Type type, PassMode mode);
         void addVar(std::string name, Type type, PassMode mode = PASS_BY_VALUE);
+        void addVar(std::string name, llvm::Type *type);
         void addVal(std::string name, llvm::Value *val);
         void addAddr(std::string name, llvm::Value *addr);
         void addRet();

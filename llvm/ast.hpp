@@ -154,7 +154,7 @@ inline llvm::Type *translateType(Type type, PassMode mode = PASS_BY_VALUE)
 	{
 		if( type->size == 0 )
 		{
-			ret = translateType( type->refType );
+			ret = translateType(type->refType)->getPointerTo();
 		}
 		else
 		{
@@ -233,14 +233,14 @@ public:
 		TheModule = std::make_unique<llvm::Module>("program", TheContext);
 		TheFPM = std::make_unique<llvm::legacy::FunctionPassManager>(TheModule.get());
 
-		TheFPM->add(llvm::createPromoteMemoryToRegisterPass());
-		TheFPM->add(llvm::createMemCpyOptPass());
-		TheFPM->add(llvm::createInstructionCombiningPass());
-		TheFPM->add(llvm::createReassociatePass());
-		TheFPM->add(llvm::createGVNPass());
-		TheFPM->add(llvm::createCFGSimplificationPass());
-		// TheFPM->add(llvm::createConstantPropagationPass());
-		TheFPM->add(llvm::createDeadCodeEliminationPass());
+		// TheFPM->add(llvm::createPromoteMemoryToRegisterPass());
+		// TheFPM->add(llvm::createMemCpyOptPass());
+		// TheFPM->add(llvm::createInstructionCombiningPass());
+		// TheFPM->add(llvm::createReassociatePass());
+		// TheFPM->add(llvm::createGVNPass());
+		// TheFPM->add(llvm::createCFGSimplificationPass());
+		// // TheFPM->add(llvm::createConstantPropagationPass());
+		// TheFPM->add(llvm::createDeadCodeEliminationPass());
 		
 
 		TheFPM->doInitialization();
@@ -351,7 +351,7 @@ public:
 
 	}
 
-	bool isArray()
+	bool isArrayIndexing()
 	{
 		return (index != NULL);
 	}
@@ -384,9 +384,17 @@ public:
 		}
 		else 
 		{
+			// this works with test 24
+			// auto *idx = this->index->codegen();
+			// auto array_address = Builder.CreateLoad(ar->getAddr(this->var));
+			// auto *address_at_index = Builder.CreateGEP(array_address, idx);
+			// return Builder.CreateLoad(address_at_index);
+
+			// this works with test 40
+			// this is the correct way
 			auto *idx = this->index->codegen();
-			auto *addr = Builder.CreateGEP(ar->getAddr(this->var), idx);
-			return Builder.CreateLoad(addr);
+			auto *address_at_index = Builder.CreateGEP(ar->getAddr(this->var), idx);
+			return Builder.CreateLoad(address_at_index);
     	}
     	return nullptr;
 	}
@@ -417,7 +425,7 @@ class Formal : public AST
 public:
 	Formal(Type t, VarList *v, bool isRef = false) : type(t), var_list(v)
 	{
-		if (isRef || t->dtype == TYPE_IARRAY || t->dtype == TYPE_LIST )
+		if (isRef)
 			mode = PASS_BY_REFERENCE;
 		else
 			mode = PASS_BY_VALUE;
@@ -609,8 +617,6 @@ public:
 
 		header->getFormalList()->codegen();
 
-		//check for new function for any variables not defined or not from argument
-		// and create a struct as argument 0 for it
 
 		if (scopes.getFunc(header->getName()) == NULL)
 		{
@@ -646,9 +652,11 @@ public:
 		llvm::BasicBlock *FuncBB = llvm::BasicBlock::Create(TheContext, "entry", func);
 		Builder.SetInsertPoint(FuncBB);
 		activationRecordStack.front()->setCurrentBlock(FuncBB);
+
 		for (auto &Arg : func->args())
 		{
 			auto *alloca = Builder.CreateAlloca(Arg.getType(), nullptr, Arg.getName());
+
 			if (Arg.getType()->isPointerTy())
 				activationRecordStack.front()->addAddr(Arg.getName().str(), alloca);
 			else
@@ -753,8 +761,9 @@ public:
 			auto llvm_type = translateType(this->type);
 			auto alloca = Builder.CreateAlloca(llvm_type, nullptr, varName);
 
-			activationRecordStack.front()->addVar(varName, type);
+			activationRecordStack.front()->addVar(varName, llvm_type);
 			activationRecordStack.front()->addVal(varName, alloca);
+			activationRecordStack.front()->addAddr(varName, alloca);
 		}
 		return nullptr;
 	}
@@ -772,6 +781,12 @@ public:
 	{
 		for (Expr *e : expr_list)
 			delete e;
+	}
+
+	virtual void sem() override
+	{
+		for(Expr *expr : expr_list)
+			expr->sem();
 	}
 
 	std::vector<Expr *> getList()
@@ -863,6 +878,7 @@ public:
 		{
 			return;
 		}
+		this->expr_list->sem();
 		int functionArguments = 0;
 		bool argMismatch = false;
 		SymbolEntry *f = lookupEntry(functionName, LOOKUP_ALL_SCOPES, true, this->semantic_line_no);
@@ -910,27 +926,23 @@ public:
 		int index = 0;
 		for (auto &Arg : TheFunction->args())
 		{
-			/* If argument by reference */
 			if (Arg.getType()->isPointerTy())
 			{
 				Var *var = dynamic_cast<Var *>(functionArgs[index]);
 				if (var != nullptr)
 				{
-					if (!var->isArray())
+					if (!var->isArrayIndexing())
 					{
-						if (activationRecordStack.front()->isRef(var->getName()))
+						if (activationRecordStack.front()->isRef(var->getName()) )
 						{
 							auto par = Builder.CreateLoad(activationRecordStack.front()->getAddr(var->getName()));
+							// auto par = activationRecordStack.front()->getAddr(var->getName());
 							callArgs.push_back(par);
 						}
 						else
 						{
 							llvm::Value *par;
-							if (activationRecordStack.front()->getVar(var->getName())->isArrayTy())
-								par = Builder.CreateGEP(activationRecordStack.front()->getVal(var->getName()), std::vector<llvm::Value *>{c32(0), c32(0)});
-							// par = Builder.CreateConstGEP1_32(activationRecordStack.front()->getVal(var->getName()), 0)
-							else
-								par = activationRecordStack.front()->getVal(var->getName());
+							par = activationRecordStack.front()->getVal(var->getName());
 							callArgs.push_back(par);
 						}
 					}
@@ -1084,6 +1096,8 @@ public:
 
 	virtual void sem() override
 	{
+		left->sem();
+		right->sem();
 		Type leftType = left->getType();
 		Type rightType = right->getType();
 		if (!equalType(leftType, rightType))
@@ -1304,6 +1318,8 @@ public:
 
 	virtual void sem() override
 	{
+		this->variable->sem();
+		this->expr->sem();
 		if (refT->dtype != TYPE_INTEGER && refT->dtype != TYPE_BOOLEAN && refT->dtype != TYPE_CHAR)
 			error(this->semantic_line_no, "Arrays of integers, booleans and characters are only supported.");
 
@@ -1317,8 +1333,11 @@ public:
 		auto len = expr->codegen();
 		int data_type_size = sizeOfDataType(type);
 		llvm::Value *total_size = Builder.CreateMul(len, llvm::ConstantInt::get(i32, data_type_size));
-		auto *alloca = Builder.CreateCall(TheMalloc, {total_size});
-		activationRecordStack.front()->addVar(variable->getName(), this->type);
+		llvm::Value *alloca = Builder.CreateCall(TheMalloc, {total_size});
+
+		alloca = Builder.CreateBitCast(alloca, translateType(type->refType)->getPointerTo() );
+		
+		activationRecordStack.front()->addVar(variable->getName(), alloca->getType());
 		activationRecordStack.front()->addVal(variable->getName(), alloca);
 		activationRecordStack.front()->addAddr(variable->getName(),alloca);
 
@@ -1359,14 +1378,9 @@ public:
 		llvm::Value *rval = right->codegen();
 		// llvm::Value *lval = left->codegen();
 
-		ActivationRecord *ar;
-		for (auto a : activationRecordStack)
-		{
-			if (a->varExists(left->getName()))
-				ar = a;
-		}
+		ActivationRecord *ar = activationRecordStack.front();
 
-		if (!left->isArray())
+		if (!left->isArrayIndexing())
 		{
 			if (ar->isRef(left->getName()))
 			{
@@ -1385,8 +1399,10 @@ public:
 			llvm::Value *val;
 			if (ar->isRef(left->getName()))
 			{
-				val = Builder.CreateLoad(ar->getAddr(left->getName()));
-				val = Builder.CreateGEP(val, idx);
+				// val = Builder.CreateLoad(ar->getAddr(left->getName()));
+				val = Builder.CreateGEP(ar->getAddr(left->getName()), idx);
+				// val = Builder.CreateLoad(ar->getAddr(left->getName()));
+				// val = Builder.CreateGEP(val, idx);
 			}
 			else
 			{
