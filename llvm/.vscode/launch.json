@@ -9,7 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "/home/akimonid/code/GinNTony/llvm/GinNTony",
-            "args": [" < /home/akimonid/code/GinNTony/tests/semantics/test2.tony"],
+            "args": [" ../tests/Correct/10func.tony "],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
             "environment": [],

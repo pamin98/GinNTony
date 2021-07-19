@@ -637,10 +637,11 @@ public:
 		this->f = func;
 
 		int index = 0;
-		auto argNames = newAR->getArgNames();
+		auto argNames = this->header->getFormalList()->get_arg_names();
 		for (auto &Arg : func->args())
+		{
 			Arg.setName( argNames[index++] );
-		
+		}
 
 		llvm::BasicBlock *FuncBB = llvm::BasicBlock::Create(TheContext, "entry", func);
 		Builder.SetInsertPoint(FuncBB);
