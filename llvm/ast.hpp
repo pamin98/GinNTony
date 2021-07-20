@@ -381,15 +381,14 @@ public:
 
 		if( index == NULL )
 		{
-			if (ar->isRef(var))
-			{
-				auto *addr = Builder.CreateLoad(ar->getAddr(var));
-				return Builder.CreateLoad(addr);
-				
-			}
-			else
+			// if (ar->isRef(var))
+			// {
+			// 	auto *addr = Builder.CreateLoad(ar->getAddr(var));
+			// 	return Builder.CreateLoad(addr);
+			// }
+			// else
 				return Builder.CreateLoad(ar->getVal(var));
-			return nullptr;
+			// return nullptr;
 		}
 		else 
 		{
@@ -664,14 +663,20 @@ public:
 
 		for (auto &Arg : func->args())
 		{
-			auto *alloca = Builder.CreateAlloca(Arg.getType(), nullptr, Arg.getName());
-
 			if (Arg.getType()->isPointerTy())
-				activationRecordStack.front()->addAddr(Arg.getName().str(), alloca);
+			{
+				activationRecordStack.front()->addVal(Arg.getName().str(), &Arg);
+				activationRecordStack.front()->addAddr(Arg.getName().str(), &Arg);
+			}
 			else
+			{
+				auto *alloca = Builder.CreateAlloca(Arg.getType(), nullptr, Arg.getName());
 				activationRecordStack.front()->addVal(Arg.getName().str(), alloca);
-			Builder.CreateStore(&Arg, alloca);
+				activationRecordStack.front()->addAddr(Arg.getName().str(), alloca);
+				Builder.CreateStore(&Arg, alloca);
+			}
 		}
+
 
 		def_list->codegen();
 		stmt_list->codegen();
@@ -771,7 +776,14 @@ public:
 		for (const char *varName : var_list->getList())
 		{
 			auto llvm_type = translateType(this->type);
-			auto alloca = Builder.CreateAlloca(llvm_type, nullptr, varName);
+			llvm::AllocaInst *alloca;
+
+			if( llvm_type->isPointerTy() )
+				alloca = Builder.CreateAlloca(llvm_type->getPointerElementType(), nullptr, varName);
+			else
+				alloca = Builder.CreateAlloca(llvm_type, nullptr, varName);	
+
+
 
 			activationRecordStack.front()->addVar(varName, llvm_type);
 			activationRecordStack.front()->addVal(varName, alloca);
@@ -914,8 +926,8 @@ public:
 					{
 						if (activationRecordStack.front()->isRef(var->getName()) )
 						{
-							auto par = Builder.CreateLoad(activationRecordStack.front()->getAddr(var->getName()));
-							// auto par = activationRecordStack.front()->getAddr(var->getName());
+							// auto par = Builder.CreateLoad(activationRecordStack.front()->getAddr(var->getName()));
+							auto par = activationRecordStack.front()->getAddr(var->getName());
 							callArgs.push_back(par);
 						}
 						else
@@ -928,18 +940,21 @@ public:
 					else
 					{
 						auto idx = var->getIndex()->codegen();
-						if (activationRecordStack.front()->isRef(var->getName()))
-						{
-							llvm::Value *par = Builder.CreateLoad(activationRecordStack.front()->getAddr(var->getName()));
-							par = Builder.CreateGEP(par, idx);
-							callArgs.push_back(par);
-						}
-						else
-						{
-							llvm::Value *par = activationRecordStack.front()->getVal(var->getName());
-							par = Builder.CreateGEP(par, std::vector<llvm::Value *>{c32(0), idx});
-							callArgs.push_back(par);
-						}
+						auto par = Builder.CreateGEP(activationRecordStack.front()->getAddr(var->getName()), idx);
+						callArgs.push_back(par);
+
+						// if (activationRecordStack.front()->isRef(var->getName()))
+						// {
+						// 	llvm::Value *par = Builder.CreateLoad(activationRecordStack.front()->getAddr(var->getName()));
+						// 	par = Builder.CreateGEP(par, idx);
+						// 	callArgs.push_back(par);
+						// }
+						// else
+						// {
+						// 	llvm::Value *par = activationRecordStack.front()->getVal(var->getName());
+						// 	par = Builder.CreateGEP(par, std::vector<llvm::Value *>{c32(0), idx});
+						// 	callArgs.push_back(par);
+						// }
 					}
 					index++;
 					continue;
@@ -1332,6 +1347,9 @@ public:
 		activationRecordStack.front()->addVal(variable->getName(), alloca);
 		activationRecordStack.front()->addAddr(variable->getName(),alloca);
 
+		// edw am theloume na kanoume store stin metavliti to gc malloc tote pragamti theloume
+		// pointer pros pointer pros type nomizw??
+
 		// this->type->size = size;
 		// auto *arrayType = translateType(this->type);
 		// auto *alloca = Builder.CreateAlloca(arrayType, size, this->variable->getName());
@@ -1376,17 +1394,17 @@ public:
 
 		if (!left->isArrayIndexing())
 		{
-			if (ar->isRef(left->getName()))
-			{
-				auto *addr = Builder.CreateLoad(ar->getAddr(left->getName()));
-				return Builder.CreateStore(rval, addr);
-			}
-			else
-			{
+			// if (ar->isRef(left->getName()))
+			// {
+			// 	auto *addr = Builder.CreateLoad(ar->getAddr(left->getName()));
+			// 	return Builder.CreateStore(rval, addr);
+			// }
+			// else
+			// {
 				return Builder.CreateStore(rval, ar->getVal(left->getName()));
-			}
+			// }
 		}
-		/* Array */
+		/* Array Indexing */
 		else
 		{
 			llvm::Value *idx = left->getIndex()->codegen();
