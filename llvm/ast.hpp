@@ -147,7 +147,8 @@ inline llvm::Type *translateType(Type type, PassMode mode = PASS_BY_VALUE)
 		auto myStructType = llvm::StructType::create(TheContext, "myStruct");
 		auto myStructPtrType = llvm::PointerType::get(myStructType, 0);
 		myStructType->setBody({listType, myStructPtrType}, false);
-		ret = myStructType;
+		// ret = myStructType;
+		ret = myStructType->getPointerTo();
 		break;
 	}
 	case TYPE_IARRAY:
@@ -341,6 +342,7 @@ class Var : public Expr
 public:
 	Var(const char *v, Expr *i = NULL) : var(v), index(i) {
 		isVar = true;
+		isArray = false;
 	}
 
 	virtual void sem() override
@@ -349,6 +351,9 @@ public:
 		if (e->entryType == ENTRY_FUNCTION)
 			error(this->semantic_line_no, "%s is a function, expected parenthesis", e->id);
 		type = e->eVariable.type;
+		// TODO MAYBE FOR LIST TOO
+		if (type->dtype == TYPE_IARRAY || type->dtype == TYPE_LIST)
+			this->isArray = true;
 
 		if (index != NULL){
 			index->sem();
@@ -381,32 +386,31 @@ public:
 
 		if( index == NULL )
 		{
-			// if (ar->isRef(var))
-			// {
-			// 	auto *addr = Builder.CreateLoad(ar->getAddr(var));
-			// 	return Builder.CreateLoad(addr);
-			// }
-			// else
+			if ( ar->isRef(var) && !isArray )
+			{
+				return Builder.CreateLoad(Builder.CreateLoad(ar->getAddr(var)));
+			}
+			else if (ar->isRef(var))
+			{
+				return Builder.CreateLoad(ar->getAddr(var));
+			}
+			else
+			{
+				std::cout << "DEBUGGING HERE "<< var << std::endl;
 				return Builder.CreateLoad(ar->getVal(var));
-			// return nullptr;
+			}
+			return nullptr;
 		}
 		else 
 		{
-			// this works with test 24
-			// auto *idx = this->index->codegen();
-			// auto array_address = Builder.CreateLoad(ar->getAddr(this->var));
-			// auto *address_at_index = Builder.CreateGEP(array_address, idx);
-			// return Builder.CreateLoad(address_at_index);
-
-			// this works with test 40
-			// this is the correct way
 			auto *idx = this->index->codegen();
-			auto *address_at_index = Builder.CreateGEP(ar->getAddr(this->var), idx);
+			auto array_address = Builder.CreateLoad(ar->getAddr(this->var),idx);
+			auto *address_at_index = Builder.CreateGEP(array_address, idx);
 			return Builder.CreateLoad(address_at_index);
     	}
     	return nullptr;
 	}
-
+	bool isArray;
 private:
 	const char *var;
 	Expr *index;
@@ -623,6 +627,11 @@ public:
 		auto newAR = new ActivationRecord();
 		activationRecordStack.push_front(newAR);
 
+
+		if(strcmp(this->header->getName(), "concat") == 0)
+		{
+			std::cout << "CODEGEN CONCAT" << std::endl;
+		}
 		header->getFormalList()->codegen();
 
 
@@ -663,20 +672,14 @@ public:
 
 		for (auto &Arg : func->args())
 		{
-			if (Arg.getType()->isPointerTy())
-			{
-				activationRecordStack.front()->addVal(Arg.getName().str(), &Arg);
-				activationRecordStack.front()->addAddr(Arg.getName().str(), &Arg);
-			}
-			else
-			{
-				auto *alloca = Builder.CreateAlloca(Arg.getType(), nullptr, Arg.getName());
-				activationRecordStack.front()->addVal(Arg.getName().str(), alloca);
-				activationRecordStack.front()->addAddr(Arg.getName().str(), alloca);
-				Builder.CreateStore(&Arg, alloca);
-			}
-		}
+			auto *alloca = Builder.CreateAlloca(Arg.getType(), nullptr, Arg.getName());
 
+			if (Arg.getType()->isPointerTy())
+				activationRecordStack.front()->addAddr(Arg.getName().str(), alloca);
+			else
+				activationRecordStack.front()->addVal(Arg.getName().str(), alloca);
+			Builder.CreateStore(&Arg, alloca);
+		}
 
 		def_list->codegen();
 		stmt_list->codegen();
@@ -776,14 +779,9 @@ public:
 		for (const char *varName : var_list->getList())
 		{
 			auto llvm_type = translateType(this->type);
-			llvm::AllocaInst *alloca;
-
-			if( llvm_type->isPointerTy() )
-				alloca = Builder.CreateAlloca(llvm_type->getPointerElementType(), nullptr, varName);
-			else
-				alloca = Builder.CreateAlloca(llvm_type, nullptr, varName);	
-
-
+			auto alloca = Builder.CreateAlloca(llvm_type, nullptr, varName);
+			// edw kanoume alloca ena pointer pros type char px
+			// ara to alloca einai pointer pros pointer pros type char 
 
 			activationRecordStack.front()->addVar(varName, llvm_type);
 			activationRecordStack.front()->addVal(varName, alloca);
@@ -926,8 +924,7 @@ public:
 					{
 						if (activationRecordStack.front()->isRef(var->getName()) )
 						{
-							// auto par = Builder.CreateLoad(activationRecordStack.front()->getAddr(var->getName()));
-							auto par = activationRecordStack.front()->getAddr(var->getName());
+							auto par = Builder.CreateLoad(activationRecordStack.front()->getAddr(var->getName()));
 							callArgs.push_back(par);
 						}
 						else
@@ -940,21 +937,18 @@ public:
 					else
 					{
 						auto idx = var->getIndex()->codegen();
-						auto par = Builder.CreateGEP(activationRecordStack.front()->getAddr(var->getName()), idx);
-						callArgs.push_back(par);
-
-						// if (activationRecordStack.front()->isRef(var->getName()))
-						// {
-						// 	llvm::Value *par = Builder.CreateLoad(activationRecordStack.front()->getAddr(var->getName()));
-						// 	par = Builder.CreateGEP(par, idx);
-						// 	callArgs.push_back(par);
-						// }
-						// else
-						// {
-						// 	llvm::Value *par = activationRecordStack.front()->getVal(var->getName());
-						// 	par = Builder.CreateGEP(par, std::vector<llvm::Value *>{c32(0), idx});
-						// 	callArgs.push_back(par);
-						// }
+						if (activationRecordStack.front()->isRef(var->getName()))
+						{
+							llvm::Value *par = Builder.CreateLoad(activationRecordStack.front()->getAddr(var->getName()));
+							par = Builder.CreateGEP(par, idx);
+							callArgs.push_back(par);
+						}
+						else
+						{
+							llvm::Value *par = activationRecordStack.front()->getVal(var->getName());
+							par = Builder.CreateGEP(par, std::vector<llvm::Value *>{c32(0), idx});
+							callArgs.push_back(par);
+						}
 					}
 					index++;
 					continue;
@@ -1251,13 +1245,17 @@ public:
 
 	virtual llvm::Value *codegen() override
 	{
-		llvm::Value *r = right->codegen();
+		llvm::Value *r;
+		if(this->op != nil)
+			r = this->right->codegen();
 		llvm::Value *l;
 		if (left != NULL)
 			l = left->codegen();
 		if (op == head)
 		{
-			r = Builder.CreateGEP(r, 0);
+			// std::cout << r->getType()->getPointerElementType()->getTypeID() << std::endl;
+			// auto struct_address = Builder.CreateLoad(r);
+			r = Builder.CreateConstGEP1_32(r, 0);
 			return Builder.CreateLoad(r);
 		}
 		else if (op == tail)
@@ -1271,24 +1269,27 @@ public:
 			auto size = 8 + sizeOfDataType(right->getType()->refType);
 			auto *new_head_alloca = Builder.CreateCall(TheMalloc, {llvm::ConstantInt::get(i32, size)});
 
-			auto *new_head_struct = Builder.CreateLoad(new_head_alloca);
+			// auto *new_head_struct = Builder.CreateLoad(new_head_alloca);
 
-			auto *new_val_address = Builder.CreateConstGEP1_32(new_head_struct, 1);
+			// auto *new_val_address = Builder.CreateConstGEP1_32(new_head_struct, 1);
+
+			auto *new_val_address = Builder.CreateConstGEP1_32(new_head_alloca, 1);
 			Builder.CreateStore(l, new_val_address);
 
 			// auto *new_head_next = Builder.CreateGEP(new_head_struct,0);
-			auto *new_head_next = Builder.CreateConstGEP1_32(new_head_struct, 0);
+			auto *new_head_next = Builder.CreateConstGEP1_32(new_head_alloca, 0);
 			Builder.CreateStore(r, new_head_next);
 		}
 		else if (op == nil)
 		{
-			Type t = new Type_tag{
-				TYPE_LIST,
-				NULL,
-				0,
-				0};
+			auto listType = llvm::Type:: ;
+			auto myStructType = llvm::StructType::create(TheContext, "myStruct");
+			auto myStructPtrType = llvm::PointerType::get(myStructType, 0);
+			myStructType->setBody({listType, myStructPtrType}, false);
+			// ret = myStructType;
+			ret = myStructType->getPointerTo();
 
-			return llvm::ConstantPointerNull::get(translateType(t)->getPointerTo());
+			// return llvm::ConstantPointerNull::get(dynamic_cast<llvm::PointerType *>(translateType(t)));
 			// return llvm::ConstantPointerNull(translateType(t)->getPointerTo());
 		}
 		else if (op == nilq)
@@ -1342,13 +1343,16 @@ public:
 		llvm::Value *alloca = Builder.CreateCall(TheMalloc, {total_size});
 
 		alloca = Builder.CreateBitCast(alloca, translateType(type->refType)->getPointerTo() );
-		
-		activationRecordStack.front()->addVar(variable->getName(), alloca->getType());
-		activationRecordStack.front()->addVal(variable->getName(), alloca);
-		activationRecordStack.front()->addAddr(variable->getName(),alloca);
 
-		// edw am theloume na kanoume store stin metavliti to gc malloc tote pragamti theloume
-		// pointer pros pointer pros type nomizw??
+		// to int [] x einai pointer pros pointer pros int
+		// edw kanoume gc malloc ena pointer pros int
+		// kai to kanw store sto pointer pros pointer pros int
+
+		Builder.CreateStore(alloca, activationRecordStack.front()->getAddr(variable->getName()));
+		
+		// activationRecordStack.front()->addVar(variable->getName(), alloca->getType());
+		// activationRecordStack.front()->addVal(variable->getName(), alloca);
+		// activationRecordStack.front()->addAddr(variable->getName(),alloca);
 
 		// this->type->size = size;
 		// auto *arrayType = translateType(this->type);
@@ -1388,42 +1392,29 @@ public:
 	virtual llvm::Value *codegen() override
 	{
 		llvm::Value *rval = right->codegen();
-		// llvm::Value *lval = left->codegen();
 
 		ActivationRecord *ar = activationRecordStack.front();
 
 		if (!left->isArrayIndexing())
 		{
-			// if (ar->isRef(left->getName()))
-			// {
-			// 	auto *addr = Builder.CreateLoad(ar->getAddr(left->getName()));
-			// 	return Builder.CreateStore(rval, addr);
-			// }
-			// else
-			// {
+			if (ar->isRef(left->getName()) && !left->isArray)
+			{
+				auto *addr = Builder.CreateLoad(ar->getAddr(left->getName()));
+				return Builder.CreateStore(rval, addr);
+			}
+			else if (ar->isRef(left->getName()))
+			{
+				return Builder.CreateStore(rval, ar->getAddr(left->getName()));
+			}
+			else
 				return Builder.CreateStore(rval, ar->getVal(left->getName()));
-			// }
 		}
-		/* Array Indexing */
 		else
 		{
 			llvm::Value *idx = left->getIndex()->codegen();
-			llvm::Value *val;
-			if (ar->isRef(left->getName()))
-			{
-				// val = Builder.CreateLoad(ar->getAddr(left->getName()));
-				val = Builder.CreateGEP(ar->getAddr(left->getName()), idx);
-				// val = Builder.CreateLoad(ar->getAddr(left->getName()));
-				// val = Builder.CreateGEP(val, idx);
-			}
-			else
-			{
-				// val = Builder.CreateLoad(ar->getVal(left->getName()));
-				// val = Builder.CreateGEP(val, std::vector<llvm::Value *>{c32(0), idx});
-			
-				val = Builder.CreateGEP(ar->getVal(left->getName()), idx);
-			}
-			return Builder.CreateStore(rval, val);
+			auto array_address = Builder.CreateLoad(ar->getAddr(left->getName()));
+			auto array_index_address = Builder.CreateGEP(array_address, idx);
+			return Builder.CreateStore(rval, array_index_address);
 		}
 		return nullptr;
 	}

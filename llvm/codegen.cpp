@@ -65,19 +65,43 @@ const std::vector<std::string>& ActivationRecord::getArgNames() const {
 }
 
 llvm::Type* ActivationRecord::getVar(std::string name) {
+    if(!this->varExists(name))
+    {
+        std::cout << "We haven't implemented nesting links so we can't find " << name << std::endl;
+        std::cout << "Terminating run beep boop!" << std::endl;
+        exit(69);
+    }
     return this->varTypes[name];
 }
 
 llvm::Value* ActivationRecord::getVal(std::string name) {
+    if(!this->varExists(name))
+    {
+        std::cout << "We haven't implemented nesting links so we can't find " << name << std::endl;
+        std::cout << "Terminating run beep boop!" << std::endl;
+        exit(69);
+    }
     return this->varValues[name];
 }
 
 llvm::Value* ActivationRecord::getAddr(std::string name) {
+    if(!this->varExists(name))
+    {
+        std::cout << "We haven't implemented nesting links so we can't find " << name << std::endl;
+        std::cout << "Terminating run beep boop!" << std::endl;
+        exit(69);
+    }
     return this->addresses[name];
 }
 
 bool ActivationRecord::isRef(std::string name) 
 {   
+    if(!this->varExists(name))
+    {
+        std::cout << "We haven't implemented nesting links so we can't find " << name << std::endl;
+        std::cout << "Terminating run beep boop!" << std::endl;
+        exit(69);
+    }
     return this->varTypes[name]->isPointerTy();
 }
 

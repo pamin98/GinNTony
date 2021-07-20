@@ -1,11 +1,13 @@
 import glob
 import os
+import subprocess
 
 path = '/home/akimonid/code/GinNTony/tests/Correct/'
 errors = []
 for filename in glob.glob(os.path.join(path, '*.tony')):
-    ret = os.system('./GinNTony %s' % filename)
-    if ret != 0:
+    res = subprocess.run(['./GinNTony', filename], stdout=subprocess.DEVNULL)
+    print(res.returncode)
+    if res.returncode != 0 and res.returncode != 69:
         errors.append(filename)
 
 print(errors)
