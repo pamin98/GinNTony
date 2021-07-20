@@ -269,7 +269,7 @@ expr:
 		| "not" expr					{ $$ = new LogOp(NOT,NULL,$2); $$->set_line(yylineno);}
 		| expr "and" expr				{ $$ = new LogOp(AND,$1,$3); $$->set_line(yylineno);}
 		| expr "or" expr				{ $$ = new LogOp(OR,$1,$3); $$->set_line(yylineno);}
-		//| "new" type '[' expr ']' 		{ $$ = new ArrayInit($2,$4); $$->set_line(yylineno);}
+		// | "new" type '[' expr ']' 		{ $$ = new ArrayInit($2,$4); $$->set_line(yylineno);}
 		| "nil"							{ $$ = new ListOp(nil,NULL,NULL); $$->set_line(yylineno);}
 		| "nil?" '(' expr ')'			{ $$ = new ListOp(nilq,NULL,$3); $$->set_line(yylineno);}
 		| expr '#' expr					{ $$ = new ListOp(append,$1,$3); $$->set_line(yylineno);}

@@ -144,7 +144,8 @@ inline llvm::Type *translateType(Type type, PassMode mode = PASS_BY_VALUE)
 	case TYPE_LIST:
 	{
 		auto listType = translateType(type->refType);
-		auto myStructType = llvm::StructType::create(TheContext, "myStruct");
+		// auto myStructType = llvm::StructType::create(TheContext, "myStruct");
+		auto myStructType = llvm::StructType::create(TheContext);
 		auto myStructPtrType = llvm::PointerType::get(myStructType, 0);
 		myStructType->setBody({listType, myStructPtrType}, false);
 		// ret = myStructType;
@@ -1282,15 +1283,11 @@ public:
 		}
 		else if (op == nil)
 		{
-			auto listType = llvm::Type:: ;
 			auto myStructType = llvm::StructType::create(TheContext, "myStruct");
 			auto myStructPtrType = llvm::PointerType::get(myStructType, 0);
-			myStructType->setBody({listType, myStructPtrType}, false);
+			myStructType->setBody({NULL, myStructPtrType}, false);
 			// ret = myStructType;
-			ret = myStructType->getPointerTo();
-
-			// return llvm::ConstantPointerNull::get(dynamic_cast<llvm::PointerType *>(translateType(t)));
-			// return llvm::ConstantPointerNull(translateType(t)->getPointerTo());
+			return llvm::ConstantPointerNull::get(myStructType->getPointerTo());
 		}
 		else if (op == nilq)
 		{

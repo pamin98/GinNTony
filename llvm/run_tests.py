@@ -6,7 +6,7 @@ path = '/home/akimonid/code/GinNTony/tests/Correct/'
 errors = []
 for filename in glob.glob(os.path.join(path, '*.tony')):
     res = subprocess.run(['./GinNTony', filename], stdout=subprocess.DEVNULL)
-    print(res.returncode)
+    # print(res.returncode)
     if res.returncode != 0 and res.returncode != 69:
         errors.append(filename)
 
