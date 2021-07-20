@@ -684,8 +684,11 @@ public:
 			{
 				if (func->getReturnType()->isIntegerTy(32))
 					Builder.CreateRet(c32(0));
-				else
+				// TODO return the return type of the function
+				else if(func->getReturnType()->isIntegerTy(8))
 					Builder.CreateRet(c8(0));
+				else
+					Builder.CreateRet(c1(0));
 			}
 		}
 
