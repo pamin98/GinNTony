@@ -18,6 +18,8 @@
 #include "llvm/Transforms/IPO/ConstantMerge.h"
 #include <llvm/Transforms/IPO.h>
 
+#include <llvm/Transforms/Scalar.h>
+
 
 
 #include "llvm/IR/LegacyPassManager.h"
@@ -271,7 +273,7 @@ public:
 		TheFPM->add(llvm::createReassociatePass());
 		TheFPM->add(llvm::createGVNPass());
 		TheFPM->add(llvm::createCFGSimplificationPass());
-		TheFPM->add(llvm::createCorrelatedValuePropagationPass());
+		// TheFPM->add(llvm::createCorrelatedValuePropagationPass());
 		TheFPM->add(llvm::createDeadCodeEliminationPass());
 		// TheFPM->add(llvm::createDeadArgEliminationPass());
 		// TheFPM->add(llvm::createConstantMergePass());
@@ -1068,6 +1070,7 @@ public:
 
 	virtual llvm::Value *codegen() override
 	{
+		std::cout << "CONST CHAR IS " << c << std::endl;
 		return llvm::ConstantInt::get(i8, c);
 	}
 

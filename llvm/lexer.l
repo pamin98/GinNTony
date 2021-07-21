@@ -16,10 +16,11 @@
 int commentLevel = 0;
 
 int getChar( char *chr){
-	if(chr[0]!='\\')
-		return chr[0];
+	if(chr[1]!='\\')
+		return chr[1];
 	else
-		switch(chr[1]){
+	{
+		switch(chr[2]){
 			case 'n': return '\n';
 			case 't': return '\t';
 			case 'r': return '\r';
@@ -32,6 +33,7 @@ int getChar( char *chr){
 				internal("Unable to get char.Aborting...");
 				exit(1);
 		}
+	}
 }
 
 %}
