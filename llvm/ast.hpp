@@ -1334,7 +1334,7 @@ public:
 			Type struct_data_type = right->getType();
 			r = Builder.CreateBitCast(r, translateType(struct_data_type));
 			r = Builder.CreateStructGEP(r, 1);
-			// r = Builder.CreateBitCast(r, translateType(struct_data_type));
+			r = Builder.CreateLoad(r);
 			return r;
 		}
 		else if (op == append)
