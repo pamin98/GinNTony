@@ -27,6 +27,9 @@
 #include <llvm/Transforms/Scalar/GVN.h>
 #include <llvm/Transforms/Utils.h>
 
+
+#include <llvm/Analysis/AliasAnalysis.h>
+
 #include <iostream>
 #include <map>
 #include <vector>
@@ -46,6 +49,7 @@
 #include <iostream>
 #include <ctime>
 #include <unistd.h>
+#include <cmath>
 
 static void codegenLibs();
 
@@ -115,6 +119,19 @@ static inline llvm::Constant *c1(int n)
 static std::deque<ActivationRecord *> activationRecordStack;
 static LLVMScope scopes;
 
+static std::unordered_map<int, llvm::Type *> listTypes;
+
+inline int getListTypeKey(Type type)
+{
+	int key = 0;
+	for(int i=0; type != NULL; i++)
+	{
+		key += type->dtype * pow(10,i);
+		type = type->refType;
+	}
+	return key;
+}
+
 
 inline llvm::Type *translateType(Type type, PassMode mode = PASS_BY_VALUE)
 {
@@ -143,13 +160,20 @@ inline llvm::Type *translateType(Type type, PassMode mode = PASS_BY_VALUE)
 	}
 	case TYPE_LIST:
 	{
-		auto listType = translateType(type->refType);
-		// auto myStructType = llvm::StructType::create(TheContext, "myStruct");
-		auto myStructType = llvm::StructType::create(TheContext);
-		auto myStructPtrType = llvm::PointerType::get(myStructType, 0);
-		myStructType->setBody({listType, myStructPtrType}, false);
-		// ret = myStructType;
-		ret = myStructType->getPointerTo();
+		int key = getListTypeKey(type);
+
+		if (listTypes.find(key) != listTypes.end())
+			ret = listTypes[key];
+		else {
+			auto listType = translateType(type->refType);
+			// auto myStructType = llvm::StructType::create(TheContext, "myStruct");
+			auto myStructType = llvm::StructType::create(TheContext);
+			auto myStructPtrType = llvm::PointerType::get(myStructType, 0);
+			myStructType->setBody({listType, myStructPtrType}, false);
+			// ret = myStructType;
+			ret = myStructType->getPointerTo();
+			listTypes[key] = ret;
+		}
 		break;
 	}
 	case TYPE_IARRAY:
@@ -388,17 +412,11 @@ public:
 		if( index == NULL )
 		{
 			if ( ar->isRef(var) && !isArray )
-			{
 				return Builder.CreateLoad(Builder.CreateLoad(ar->getAddr(var)));
-			}
 			else if (ar->isRef(var))
-			{
 				return Builder.CreateLoad(ar->getAddr(var));
-			}
 			else
-			{
 				return Builder.CreateLoad(ar->getVal(var));
-			}
 			return nullptr;
 		}
 		else 
@@ -627,15 +645,10 @@ public:
 		auto newAR = new ActivationRecord();
 		activationRecordStack.push_front(newAR);
 
-
-		if(strcmp(this->header->getName(), "concat") == 0)
-		{
-			std::cout << "CODEGEN CONCAT" << std::endl;
-		}
 		header->getFormalList()->codegen();
 
 
-		if (scopes.getFunc(header->getName()) == NULL)
+		if (scopes.getFuncDecl(header->getName()) == NULL)
 		{
 			llvm::FunctionType *ftype = llvm::FunctionType::get(
 				translateType(this->header->getType()), activationRecordStack.front()->getArgs(), false);
@@ -652,7 +665,11 @@ public:
 			scopes.addFunc(std::string(header->getName()), func);
 		}
 		else
-			activationRecordStack.front()->setFunc(scopes.getFunc(header->getName()));
+		{
+			activationRecordStack.front()->setFunc(scopes.getFuncDecl(header->getName()));
+			scopes.addFunc( header->getName(), scopes.getFuncDecl(header->getName()) );
+		}
+			
 
 		scopes.openScope();
 
@@ -692,11 +709,16 @@ public:
 			{
 				if (func->getReturnType()->isIntegerTy(32))
 					Builder.CreateRet(c32(0));
-				// TODO return the return type of the function
 				else if(func->getReturnType()->isIntegerTy(8))
 					Builder.CreateRet(c8(0));
-				else
+				else if(func->getReturnType()->isIntegerTy(1))
 					Builder.CreateRet(c1(0));
+				else
+				{
+					llvm::Type *t = translateType(this->header->getType());
+					auto retVal = llvm::ConstantPointerNull::get(llvm::Type::getInt32Ty(TheContext)->getPointerTo());
+					Builder.CreateRet(Builder.CreateBitCast(retVal, t));
+				}
 			}
 		}
 
@@ -746,7 +768,7 @@ public:
 		llvm::Function *func = llvm::Function::Create(
 			ftype, llvm::Function::ExternalLinkage, header->getName(), TheModule.get());
 
-		scopes.addFunc(header->getName(), func);
+		scopes.addFuncDecl(header->getName(), func);
 		activationRecordStack.pop_front();
 
 		return nullptr;
@@ -780,8 +802,6 @@ public:
 		{
 			auto llvm_type = translateType(this->type);
 			auto alloca = Builder.CreateAlloca(llvm_type, nullptr, varName);
-			// edw kanoume alloca ena pointer pros type char px
-			// ara to alloca einai pointer pros pointer pros type char 
 
 			activationRecordStack.front()->addVar(varName, llvm_type);
 			activationRecordStack.front()->addVal(varName, alloca);
@@ -966,7 +986,7 @@ public:
 				}
 				else
 				{
-					callArgs.push_back(functionArgs[index]->codegen());
+					callArgs.push_back(Builder.CreateBitCast(functionArgs[index]->codegen(), Arg.getType()));
 					index++;
 					continue;
 				}
@@ -1254,6 +1274,11 @@ public:
 		}
 	}
 
+	listOp getOp()
+	{
+		return this->op;
+	}
+
 	virtual llvm::Value *codegen() override
 	{
 		llvm::Value *r;
@@ -1262,42 +1287,60 @@ public:
 		llvm::Value *l;
 		if (left != NULL)
 			l = left->codegen();
+
 		if (op == head)
 		{
-			// std::cout << r->getType()->getPointerElementType()->getTypeID() << std::endl;
-			// auto struct_address = Builder.CreateLoad(r);
-			r = Builder.CreateConstGEP1_32(r, 0);
-			return Builder.CreateLoad(r);
+			Type value_data_type = right->getType()->refType;
+			Type struct_data_type = right->getType();
+			r = Builder.CreateBitCast(r, translateType(struct_data_type));
+			// r = Builder.CreateStructGEP(translateType(struct_data_type), r, 0);
+			r = Builder.CreateStructGEP( r, 0);
+			// r = Builder.CreateGEP(r,llvm::ConstantInt::get(i32,0));
+			// r = Builder.CreateConstGEP1_32(r, 0);
+			r = Builder.CreateLoad(r);
+			r = Builder.CreateBitCast(r, translateType(value_data_type));
+			return r;
 		}
 		else if (op == tail)
 		{
-			// r = Builder.CreateGEP(r, 1);
-			r = Builder.CreateConstGEP1_32(r, 1);
-			return Builder.CreateLoad(r);
+			Type struct_data_type = right->getType();
+			r = Builder.CreateBitCast(r, translateType(struct_data_type));
+			r = Builder.CreateStructGEP( r, 1);
+			// r = Builder.CreateBitCast(r, translateType(struct_data_type));
+			return r;
 		}
 		else if (op == append)
 		{
-			auto size = 8 + sizeOfDataType(right->getType()->refType);
-			auto *new_head_alloca = Builder.CreateCall(TheMalloc, {llvm::ConstantInt::get(i32, size)});
+			Type value_data_type;
+			Type struct_data_type;
+			if( dynamic_cast<ListOp *>(right) != nullptr && dynamic_cast<ListOp *>(right)->getOp() == nil )
+			{
+				value_data_type = left->getType();
+				struct_data_type = new Type_tag{TYPE_LIST,value_data_type,0,0};
+				// r = Builder.CreateBitCast(r, translateType(struct_data_type));
+			}
+			else
+			{
+				value_data_type = right->getType()->refType;
+				struct_data_type = right->getType();
+			}
+			int size = 8 + sizeOfDataType(value_data_type);
+			llvm::Value *new_head_alloca = Builder.CreateCall(TheMalloc, {llvm::ConstantInt::get(i32, size)});
+			new_head_alloca = Builder.CreateBitCast(new_head_alloca, translateType(struct_data_type) );
 
-			// auto *new_head_struct = Builder.CreateLoad(new_head_alloca);
-
-			// auto *new_val_address = Builder.CreateConstGEP1_32(new_head_struct, 1);
-
-			auto *new_val_address = Builder.CreateConstGEP1_32(new_head_alloca, 1);
+			llvm::Value *new_val_address = Builder.CreateConstGEP1_32(new_head_alloca, 1);
+			new_val_address = Builder.CreateBitCast(new_val_address, translateType(value_data_type)->getPointerTo() );
 			Builder.CreateStore(l, new_val_address);
 
-			// auto *new_head_next = Builder.CreateGEP(new_head_struct,0);
 			auto *new_head_next = Builder.CreateConstGEP1_32(new_head_alloca, 0);
+			new_head_next = Builder.CreateBitCast(new_head_next, translateType(struct_data_type)->getPointerTo() );
+			r = Builder.CreateBitCast(r, translateType(struct_data_type));
 			Builder.CreateStore(r, new_head_next);
+			return new_head_alloca;
 		}
 		else if (op == nil)
 		{
-			auto myStructType = llvm::StructType::create(TheContext, "myStruct");
-			auto myStructPtrType = llvm::PointerType::get(myStructType, 0);
-			myStructType->setBody({NULL, myStructPtrType}, false);
-			// ret = myStructType;
-			return llvm::ConstantPointerNull::get(myStructType->getPointerTo());
+			return llvm::ConstantPointerNull::get(llvm::Type::getInt32Ty(TheContext)->getPointerTo());
 		}
 		else if (op == nilq)
 		{
@@ -1351,21 +1394,9 @@ public:
 
 		alloca = Builder.CreateBitCast(alloca, translateType(type->refType)->getPointerTo() );
 
-		// to int [] x einai pointer pros pointer pros int
-		// edw kanoume gc malloc ena pointer pros int
-		// kai to kanw store sto pointer pros pointer pros int
 
 		Builder.CreateStore(alloca, activationRecordStack.front()->getAddr(variable->getName()));
 		
-		// activationRecordStack.front()->addVar(variable->getName(), alloca->getType());
-		// activationRecordStack.front()->addVal(variable->getName(), alloca);
-		// activationRecordStack.front()->addAddr(variable->getName(),alloca);
-
-		// this->type->size = size;
-		// auto *arrayType = translateType(this->type);
-		// auto *alloca = Builder.CreateAlloca(arrayType, size, this->variable->getName());
-		// activationRecordStack.front()->addVar(variable->getName(), this->type);
-		// activationRecordStack.front()->addVal(variable->getName(), alloca);
 		return nullptr;
 	}
 
@@ -1411,6 +1442,8 @@ public:
 			}
 			else if (ar->isRef(left->getName()))
 			{
+				if (left->getType()->dtype == TYPE_LIST)
+					rval = Builder.CreateBitCast(rval, translateType(left->getType()));
 				return Builder.CreateStore(rval, ar->getAddr(left->getName()));
 			}
 			else
@@ -1455,6 +1488,7 @@ public:
 	virtual void sem()
 	{
 		Type returnType = currentScope->returnType;
+		this->return_type = returnType;
 		returnExpr->sem();
 		Type exprType = returnExpr->getType();
 		if (!equalType(exprType, returnType)){
@@ -1467,10 +1501,15 @@ public:
 	virtual llvm::Value *codegen() override
 	{
 		activationRecordStack.front()->addRet();
-		return Builder.CreateRet(this->returnExpr->codegen());
+		return Builder.CreateRet(Builder.CreateBitCast(this->returnExpr->codegen(), activationRecordStack.front()->getFunc()->getReturnType()  ));
+		// if( this->return_type->dtype == TYPE_LIST )
+		// 	return Builder.CreateRet(Builder.CreateBitCast(this->returnExpr->codegen(), translateType(this->return_type)));
+		// else
+		// 	return Builder.CreateRet(this->returnExpr->codegen());
 	}
 
 private:
+	Type return_type;
 	Expr *returnExpr;
 };
 

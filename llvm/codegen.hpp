@@ -58,6 +58,7 @@ class ActivationRecord
 class LLVMScope {
     private:
         std::deque<std::unordered_map<std::string, llvm::Function*>> functions;
+        std::deque<std::unordered_map<std::string, llvm::Function*>> functions_declared;
         
     public:
         LLVMScope();
@@ -69,7 +70,9 @@ class LLVMScope {
         void closeScope();
         bool empty();
         void addFunc(std::string id, llvm::Function *func);
+        void addFuncDecl(std::string id, llvm::Function *func);
         llvm::Function* getFunc(std::string id);
+        llvm::Function* getFuncDecl(std::string id);
 };
 
 

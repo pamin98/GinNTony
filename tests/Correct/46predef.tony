@@ -11,7 +11,6 @@ def predef ():
    int puti
 
    puti := 42
-   puti(puti)
    puts(puti)
    newline()
 end

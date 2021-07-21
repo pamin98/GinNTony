@@ -132,6 +132,7 @@ LLVMScope::~LLVMScope() {}
 
 void LLVMScope::openScope() {
     this->functions.push_front( std::unordered_map<std::string, llvm::Function*>() );
+    this->functions_declared.push_front( std::unordered_map<std::string, llvm::Function*>() );
 }
 
 bool LLVMScope::empty()
@@ -152,8 +153,22 @@ void LLVMScope::addFunc(std::string id, llvm::Function *func) {
     this->functions.front()[id] = func;
 }
 
+void LLVMScope::addFuncDecl(std::string id, llvm::Function *func) {
+    this->is_initialized = true;
+    this->functions_declared.front()[id] = func;
+}
+
 llvm::Function* LLVMScope::getFunc(std::string id) {
     for ( auto funcs : this->functions ) 
+    {
+        if (funcs.find(id) != funcs.end())
+            return funcs[id];
+    }
+    return NULL;
+}
+
+llvm::Function* LLVMScope::getFuncDecl(std::string id) {
+    for ( auto funcs : this->functions_declared ) 
     {
         if (funcs.find(id) != funcs.end())
             return funcs[id];

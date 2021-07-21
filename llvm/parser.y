@@ -9,7 +9,7 @@
 #include "lexer.hpp"
 #include "symbol.hpp"
 
-#define YYDEBUG 1
+// #define YYDEBUG 1
 
 extern FILE *yyin;
 

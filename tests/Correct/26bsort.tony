@@ -7,8 +7,8 @@ def main ():
       def swap (ref int x, y):
          int t
          t := x
-         x := y
-	      y := t
+	 x := y
+	 y := t
       end
 
       for changed := true; changed; skip:

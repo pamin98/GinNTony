@@ -1,11 +1,10 @@
 def scope ():
+
    int x, y
 
    def test ():
-      int y,x
-      x := 5
-      y := 10
-      
+      int y
+      y := 2
       puti(x)
       puti(y)
       puts("\n")
@@ -15,4 +14,3 @@ def scope ():
    y := 9
    test()
 end
-
