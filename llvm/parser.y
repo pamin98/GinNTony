@@ -242,7 +242,8 @@ expr_head:
 atom:
 		  T_var							{ $$ = new Var($1); $$->set_line(yylineno);}
 		| T_constString					{ $$ = new ConstString($1); $$->set_line(yylineno);}
-		| T_var '[' expr ']'				{ $$ = new Var($1,$3); $$->set_line(yylineno);}		
+		| T_constString '[' expr ']'	{ $$ = new ConstString($1,$3); $$->set_line(yylineno);}
+		| T_var '[' expr ']'			{ $$ = new Var($1,$3); $$->set_line(yylineno);}		
 		| call							{ $$ = $1; }
 		;
 

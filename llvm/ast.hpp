@@ -397,7 +397,6 @@ public:
 			}
 			else
 			{
-				std::cout << "DEBUGGING HERE "<< var << std::endl;
 				return Builder.CreateLoad(ar->getVal(var));
 			}
 			return nullptr;
@@ -826,11 +825,14 @@ private:
 class ConstString : public Expr
 {
 public:
-	ConstString(const char *str) : str(str) {}
+	ConstString(const char *str, Expr *index = NULL) : str(str), index(index) {}
 
 	virtual void sem() override
 	{
-		type = typeIArray(typeChar);
+		if (index == NULL)
+			type = typeIArray(typeChar);
+		else
+			type = typeChar;
 	}
 
 	virtual void checkLVal() override
@@ -840,11 +842,19 @@ public:
 
 	virtual llvm::Value *codegen() override
 	{
-		return Builder.CreateGlobalStringPtr(str);
+		if (index == NULL)
+			return Builder.CreateGlobalStringPtr(str);
+		else {
+			llvm::Value *idx = index->codegen();
+			llvm::Value *string_pointer = Builder.CreateGlobalStringPtr(str);
+			llvm::Value *char_pointer = Builder.CreateGEP(string_pointer, idx);
+			return Builder.CreateLoad(char_pointer);
+		}
 	}
 
 private:
 	const char *str;
+	Expr *index;
 };
 
 class CallObject : public Expr, public Stmt
