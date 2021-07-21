@@ -265,19 +265,22 @@ public:
 		TheFPM->add(llvm::createPromoteMemoryToRegisterPass());
 		TheFPM->add(llvm::createMemCpyOptPass());
 		TheFPM->add(llvm::createInstructionCombiningPass());
+		// MINE 
+		TheFPM->add(llvm::createDeadCodeEliminationPass());
+		// ----
 		TheFPM->add(llvm::createReassociatePass());
 		TheFPM->add(llvm::createGVNPass());
 		TheFPM->add(llvm::createCFGSimplificationPass());
 		TheFPM->add(llvm::createCorrelatedValuePropagationPass());
 		TheFPM->add(llvm::createDeadCodeEliminationPass());
-		TheFPM->add(llvm::createDeadArgEliminationPass());
-		TheFPM->add(llvm::createConstantMergePass());
-		TheFPM->add(llvm::createGlobalDCEPass());
-		TheFPM->add(llvm::createGlobalOptimizerPass());
+		// TheFPM->add(llvm::createDeadArgEliminationPass());
+		// TheFPM->add(llvm::createConstantMergePass());
+		// TheFPM->add(llvm::createGlobalDCEPass());
+		// TheFPM->add(llvm::createGlobalOptimizerPass());
 		TheFPM->add(llvm::createGVNPass());
 		TheFPM->add(llvm::createIndVarSimplifyPass());
 		TheFPM->add(llvm::createInstructionCombiningPass());
-		TheFPM->add(llvm::createFunctionInliningPass());
+		// TheFPM->add(llvm::createFunctionInliningPass());
 		TheFPM->add(llvm::createJumpThreadingPass());
 		TheFPM->add(llvm::createLICMPass());
 		TheFPM->add(llvm::createLoopDeletionPass());
@@ -285,7 +288,7 @@ public:
 		TheFPM->add(llvm::createLoopUnrollPass());
 		TheFPM->add(llvm::createLoopUnswitchPass());
 		TheFPM->add(llvm::createSCCPPass());
-		TheFPM->add(llvm::createStripDeadPrototypesPass());
+		// TheFPM->add(llvm::createStripDeadPrototypesPass());
 		TheFPM->add(llvm::createTailCallEliminationPass());
 		
 
