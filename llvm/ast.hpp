@@ -887,11 +887,14 @@ public:
 
 	virtual llvm::Value *codegen() override
 	{
+		std::string s(str);
+		// Remove " " from 
+		s = s.substr(1, s.size() - 2);
 		if (index == NULL)
-			return Builder.CreateGlobalStringPtr(str);
+			return Builder.CreateGlobalStringPtr(s);
 		else {
 			llvm::Value *idx = index->codegen();
-			llvm::Value *string_pointer = Builder.CreateGlobalStringPtr(str);
+			llvm::Value *string_pointer = Builder.CreateGlobalStringPtr(s);
 			llvm::Value *char_pointer = Builder.CreateGEP(string_pointer, idx);
 			return Builder.CreateLoad(char_pointer);
 		}
@@ -1070,7 +1073,6 @@ public:
 
 	virtual llvm::Value *codegen() override
 	{
-		std::cout << "CONST CHAR IS " << c << std::endl;
 		return llvm::ConstantInt::get(i8, c);
 	}
 
