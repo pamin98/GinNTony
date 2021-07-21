@@ -264,34 +264,34 @@ public:
 		TheFPM = std::make_unique<llvm::legacy::FunctionPassManager>(TheModule.get());
 
 
-		TheFPM->add(llvm::createPromoteMemoryToRegisterPass());
-		TheFPM->add(llvm::createMemCpyOptPass());
-		TheFPM->add(llvm::createInstructionCombiningPass());
-		// MINE 
-		TheFPM->add(llvm::createDeadCodeEliminationPass());
-		// ----
-		TheFPM->add(llvm::createReassociatePass());
-		TheFPM->add(llvm::createGVNPass());
-		TheFPM->add(llvm::createCFGSimplificationPass());
-		// TheFPM->add(llvm::createCorrelatedValuePropagationPass());
-		TheFPM->add(llvm::createDeadCodeEliminationPass());
-		// TheFPM->add(llvm::createDeadArgEliminationPass());
-		// TheFPM->add(llvm::createConstantMergePass());
-		// TheFPM->add(llvm::createGlobalDCEPass());
-		// TheFPM->add(llvm::createGlobalOptimizerPass());
-		TheFPM->add(llvm::createGVNPass());
-		TheFPM->add(llvm::createIndVarSimplifyPass());
-		TheFPM->add(llvm::createInstructionCombiningPass());
-		// TheFPM->add(llvm::createFunctionInliningPass());
-		TheFPM->add(llvm::createJumpThreadingPass());
-		TheFPM->add(llvm::createLICMPass());
-		TheFPM->add(llvm::createLoopDeletionPass());
-		TheFPM->add(llvm::createLoopIdiomPass());
-		TheFPM->add(llvm::createLoopUnrollPass());
-		TheFPM->add(llvm::createLoopUnswitchPass());
-		TheFPM->add(llvm::createSCCPPass());
-		// TheFPM->add(llvm::createStripDeadPrototypesPass());
-		TheFPM->add(llvm::createTailCallEliminationPass());
+		// TheFPM->add(llvm::createPromoteMemoryToRegisterPass());
+		// TheFPM->add(llvm::createMemCpyOptPass());
+		// TheFPM->add(llvm::createInstructionCombiningPass());
+		// // MINE 
+		// TheFPM->add(llvm::createDeadCodeEliminationPass());
+		// // ----
+		// TheFPM->add(llvm::createReassociatePass());
+		// TheFPM->add(llvm::createGVNPass());
+		// TheFPM->add(llvm::createCFGSimplificationPass());
+		// // TheFPM->add(llvm::createCorrelatedValuePropagationPass());
+		// TheFPM->add(llvm::createDeadCodeEliminationPass());
+		// // TheFPM->add(llvm::createDeadArgEliminationPass());
+		// // TheFPM->add(llvm::createConstantMergePass());
+		// // TheFPM->add(llvm::createGlobalDCEPass());
+		// // TheFPM->add(llvm::createGlobalOptimizerPass());
+		// TheFPM->add(llvm::createGVNPass());
+		// TheFPM->add(llvm::createIndVarSimplifyPass());
+		// TheFPM->add(llvm::createInstructionCombiningPass());
+		// // TheFPM->add(llvm::createFunctionInliningPass());
+		// TheFPM->add(llvm::createJumpThreadingPass());
+		// TheFPM->add(llvm::createLICMPass());
+		// TheFPM->add(llvm::createLoopDeletionPass());
+		// TheFPM->add(llvm::createLoopIdiomPass());
+		// TheFPM->add(llvm::createLoopUnrollPass());
+		// TheFPM->add(llvm::createLoopUnswitchPass());
+		// TheFPM->add(llvm::createSCCPPass());
+		// // TheFPM->add(llvm::createStripDeadPrototypesPass());
+		// TheFPM->add(llvm::createTailCallEliminationPass());
 		
 
 		TheFPM->doInitialization();
@@ -1321,10 +1321,7 @@ public:
 			Type value_data_type = right->getType()->refType;
 			Type struct_data_type = right->getType();
 			r = Builder.CreateBitCast(r, translateType(struct_data_type));
-			// r = Builder.CreateStructGEP(translateType(struct_data_type), r, 0);
 			r = Builder.CreateStructGEP( r, 0);
-			// r = Builder.CreateGEP(r,llvm::ConstantInt::get(i32,0));
-			// r = Builder.CreateConstGEP1_32(r, 0);
 			r = Builder.CreateLoad(r);
 			r = Builder.CreateBitCast(r, translateType(value_data_type));
 			return r;
@@ -1334,6 +1331,8 @@ public:
 			Type struct_data_type = right->getType();
 			r = Builder.CreateBitCast(r, translateType(struct_data_type));
 			r = Builder.CreateStructGEP(r, 1);
+			r = Builder.CreateBitCast(r, translateType(struct_data_type)->getPointerTo());
+			r = Builder.CreateLoad(r);
 			return r;
 		}
 		else if (op == append)
@@ -1354,11 +1353,11 @@ public:
 			llvm::Value *new_head_alloca = Builder.CreateCall(TheMalloc, {llvm::ConstantInt::get(i32, size)});
 			new_head_alloca = Builder.CreateBitCast(new_head_alloca, translateType(struct_data_type) );
 
-			llvm::Value *new_val_address = Builder.CreateStructGEP(new_head_alloca, 1);
+			llvm::Value *new_val_address = Builder.CreateStructGEP(new_head_alloca, 0);
 			new_val_address = Builder.CreateBitCast(new_val_address, translateType(value_data_type)->getPointerTo() );
 			Builder.CreateStore(l, new_val_address);
 
-			auto *new_head_next = Builder.CreateStructGEP(new_head_alloca, 0);
+			auto *new_head_next = Builder.CreateStructGEP(new_head_alloca, 1);
 			new_head_next = Builder.CreateBitCast(new_head_next, translateType(struct_data_type)->getPointerTo() );
 			r = Builder.CreateBitCast(r, translateType(struct_data_type));
 			Builder.CreateStore(r, new_head_next);
