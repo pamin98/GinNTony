@@ -1333,7 +1333,7 @@ public:
 		{
 			Type struct_data_type = right->getType();
 			r = Builder.CreateBitCast(r, translateType(struct_data_type));
-			r = Builder.CreateStructGEP( r, 1);
+			r = Builder.CreateStructGEP(r, 1);
 			// r = Builder.CreateBitCast(r, translateType(struct_data_type));
 			return r;
 		}
@@ -1355,11 +1355,11 @@ public:
 			llvm::Value *new_head_alloca = Builder.CreateCall(TheMalloc, {llvm::ConstantInt::get(i32, size)});
 			new_head_alloca = Builder.CreateBitCast(new_head_alloca, translateType(struct_data_type) );
 
-			llvm::Value *new_val_address = Builder.CreateConstGEP1_32(new_head_alloca, 1);
+			llvm::Value *new_val_address = Builder.CreateStructGEP(new_head_alloca, 1);
 			new_val_address = Builder.CreateBitCast(new_val_address, translateType(value_data_type)->getPointerTo() );
 			Builder.CreateStore(l, new_val_address);
 
-			auto *new_head_next = Builder.CreateConstGEP1_32(new_head_alloca, 0);
+			auto *new_head_next = Builder.CreateStructGEP(new_head_alloca, 0);
 			new_head_next = Builder.CreateBitCast(new_head_next, translateType(struct_data_type)->getPointerTo() );
 			r = Builder.CreateBitCast(r, translateType(struct_data_type));
 			Builder.CreateStore(r, new_head_next);
