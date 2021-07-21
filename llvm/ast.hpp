@@ -96,7 +96,6 @@ enum HeaderType
 static llvm::LLVMContext TheContext;
 static llvm::IRBuilder<> Builder(TheContext);
 static std::unique_ptr<llvm::Module> TheModule;
-static std::map<std::string, llvm::AllocaInst *> NamedValues;
 static std::unique_ptr<llvm::legacy::FunctionPassManager> TheFPM;
 static llvm::Function *TheInit;
 static llvm::Function *TheMalloc;
@@ -1369,10 +1368,12 @@ public:
 		}
 		else if (op == nilq)
 		{
-			if (llvm::ConstantPointerNull::classof(r))
-				return llvm::ConstantInt::getTrue(TheContext);
-			else
-				return llvm::ConstantInt::getFalse(TheContext);
+			llvm::Value *nil_type = llvm::ConstantPointerNull::get(static_cast<llvm::PointerType *>(r->getType()));
+			return Builder.CreateICmpEQ(r, nil_type);
+			// if (llvm::ConstantPointerNull::classof(r))
+			// 	return llvm::ConstantInt::getTrue(TheContext);
+			// else
+			// 	return llvm::ConstantInt::getFalse(TheContext);
 		}
 
 		return nullptr;

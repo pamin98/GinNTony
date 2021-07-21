@@ -2429,6 +2429,24 @@ yyreturn:
 int main(int argc, char *argv[])
 {
 	// yydebug = 1;
+	// bool optimize = false;
+	// bool print_intermediate = false;
+	// bool print_asm = false;
+	// while ((char c = getopt (argc, argv, "fio")) != -1)
+	// {
+	// 	switch (c)
+	// 	{
+	// 	case 'f':
+	// 		print_asm = true;
+	// 		break;
+	// 	case 'i':
+	// 		print_asm = true;
+	// 		break;
+	// 	case 'o':
+	// 		optimize = true;
+	// 		break;
+	// 	}
+	// }
 	yyin = fopen(argv[1],"r");
 	initSymbolTable(ST_SIZE);
 	openScope();

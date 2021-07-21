@@ -62,6 +62,7 @@
         "set": "cpp",
         "*.def": "cpp",
         "regex": "cpp",
-        "*.inc": "cpp"
+        "*.inc": "cpp",
+        "unordered_set": "cpp"
     }
 }
