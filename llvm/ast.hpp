@@ -15,6 +15,9 @@
 #include "llvm/Support/FileSystem.h"
 
 #include "llvm/Transforms/IPO/DeadArgumentElimination.h"
+#include "llvm/Transforms/IPO/ConstantMerge.h"
+#include <llvm/Transforms/IPO.h>
+
 
 
 #include "llvm/IR/LegacyPassManager.h"
@@ -26,6 +29,7 @@
 #include <llvm/Transforms/Scalar.h>
 #include <llvm/Transforms/Scalar/GVN.h>
 #include <llvm/Transforms/Utils.h>
+
 
 
 #include <llvm/Analysis/AliasAnalysis.h>
@@ -166,11 +170,9 @@ inline llvm::Type *translateType(Type type, PassMode mode = PASS_BY_VALUE)
 			ret = listTypes[key];
 		else {
 			auto listType = translateType(type->refType);
-			// auto myStructType = llvm::StructType::create(TheContext, "myStruct");
 			auto myStructType = llvm::StructType::create(TheContext);
 			auto myStructPtrType = llvm::PointerType::get(myStructType, 0);
 			myStructType->setBody({listType, myStructPtrType}, false);
-			// ret = myStructType;
 			ret = myStructType->getPointerTo();
 			listTypes[key] = ret;
 		}
@@ -259,14 +261,32 @@ public:
 		TheModule = std::make_unique<llvm::Module>("program", TheContext);
 		TheFPM = std::make_unique<llvm::legacy::FunctionPassManager>(TheModule.get());
 
-		// TheFPM->add(llvm::createPromoteMemoryToRegisterPass());
-		// TheFPM->add(llvm::createMemCpyOptPass());
-		// TheFPM->add(llvm::createInstructionCombiningPass());
-		// TheFPM->add(llvm::createReassociatePass());
-		// TheFPM->add(llvm::createGVNPass());
-		// TheFPM->add(llvm::createCFGSimplificationPass());
-		// // TheFPM->add(llvm::createConstantPropagationPass());
-		// TheFPM->add(llvm::createDeadCodeEliminationPass());
+
+		TheFPM->add(llvm::createPromoteMemoryToRegisterPass());
+		TheFPM->add(llvm::createMemCpyOptPass());
+		TheFPM->add(llvm::createInstructionCombiningPass());
+		TheFPM->add(llvm::createReassociatePass());
+		TheFPM->add(llvm::createGVNPass());
+		TheFPM->add(llvm::createCFGSimplificationPass());
+		TheFPM->add(llvm::createCorrelatedValuePropagationPass());
+		TheFPM->add(llvm::createDeadCodeEliminationPass());
+		TheFPM->add(llvm::createDeadArgEliminationPass());
+		TheFPM->add(llvm::createConstantMergePass());
+		TheFPM->add(llvm::createGlobalDCEPass());
+		TheFPM->add(llvm::createGlobalOptimizerPass());
+		TheFPM->add(llvm::createGVNPass());
+		TheFPM->add(llvm::createIndVarSimplifyPass());
+		TheFPM->add(llvm::createInstructionCombiningPass());
+		TheFPM->add(llvm::createFunctionInliningPass());
+		TheFPM->add(llvm::createJumpThreadingPass());
+		TheFPM->add(llvm::createLICMPass());
+		TheFPM->add(llvm::createLoopDeletionPass());
+		TheFPM->add(llvm::createLoopIdiomPass());
+		TheFPM->add(llvm::createLoopUnrollPass());
+		TheFPM->add(llvm::createLoopUnswitchPass());
+		TheFPM->add(llvm::createSCCPPass());
+		TheFPM->add(llvm::createStripDeadPrototypesPass());
+		TheFPM->add(llvm::createTailCallEliminationPass());
 		
 
 		TheFPM->doInitialization();
@@ -1317,7 +1337,6 @@ public:
 			{
 				value_data_type = left->getType();
 				struct_data_type = new Type_tag{TYPE_LIST,value_data_type,0,0};
-				// r = Builder.CreateBitCast(r, translateType(struct_data_type));
 			}
 			else
 			{
