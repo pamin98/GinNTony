@@ -1,4 +1,4 @@
-/* A Bison parser, made by GNU Bison 3.7.4.  */
+/* A Bison parser, made by GNU Bison 3.5.1.  */
 
 /* Bison interface for Yacc-like parsers in C
 
@@ -31,9 +31,8 @@
    This special exception was added by the Free Software Foundation in
    version 2.2 of Bison.  */
 
-/* DO NOT RELY ON FEATURES THAT ARE NOT DOCUMENTED in the manual,
-   especially those whose name start with YY_ or yy_.  They are
-   private implementation details that can be changed or removed.  */
+/* Undocumented macros, especially those whose name start with YY_,
+   are private implementation details.  Do not rely on them.  */
 
 #ifndef YY_YY_PARSER_HPP_INCLUDED
 # define YY_YY_PARSER_HPP_INCLUDED
@@ -51,55 +50,50 @@ extern int yydebug;
 	#include "ast.hpp" 	
 	#include <string>
 
-#line 55 "parser.hpp"
+#line 54 "parser.hpp"
 
-/* Token kinds.  */
+/* Token type.  */
 #ifndef YYTOKENTYPE
 # define YYTOKENTYPE
   enum yytokentype
   {
-    YYEMPTY = -2,
-    YYEOF = 0,                     /* "end of file"  */
-    YYerror = 256,                 /* error  */
-    YYUNDEF = 257,                 /* "invalid token"  */
-    T_and = 258,                   /* "and"  */
-    T_end = 259,                   /* "end"  */
-    T_list = 260,                  /* "list"  */
-    T_ref = 261,                   /* "ref"  */
-    T_bool = 262,                  /* "bool"  */
-    T_exit = 263,                  /* "exit"  */
-    T_mod = 264,                   /* "mod"  */
-    T_return = 265,                /* "return"  */
-    T_char = 266,                  /* "char"  */
-    T_false = 267,                 /* "false"  */
-    T_true = 268,                  /* "true"  */
-    T_new = 269,                   /* "new"  */
-    T_skip = 270,                  /* "skip"  */
-    T_decl = 271,                  /* "decl"  */
-    T_for = 272,                   /* "for"  */
-    T_nil = 273,                   /* "nil"  */
-    T_tail = 274,                  /* "tail"  */
-    T_head = 275,                  /* "head"  */
-    T_def = 276,                   /* "def"  */
-    T_nilq = 277,                  /* "nil?"  */
-    T_if = 278,                    /* "if"  */
-    T_else = 279,                  /* "else"  */
-    T_elsif = 280,                 /* "elsif"  */
-    T_not = 281,                   /* "not"  */
-    T_int = 282,                   /* "int"  */
-    T_or = 283,                    /* "or"  */
-    T_assign = 284,                /* ":="  */
-    T_ge = 285,                    /* ">="  */
-    T_le = 286,                    /* "<="  */
-    T_neq = 287,                   /* "<>"  */
-    T_constInt = 288,              /* T_constInt  */
-    T_var = 289,                   /* T_var  */
-    T_constChar = 290,             /* T_constChar  */
-    T_constString = 291,           /* T_constString  */
-    UPLUS = 292,                   /* UPLUS  */
-    UMINUS = 293                   /* UMINUS  */
+    T_and = 258,
+    T_end = 259,
+    T_list = 260,
+    T_ref = 261,
+    T_bool = 262,
+    T_exit = 263,
+    T_mod = 264,
+    T_return = 265,
+    T_char = 266,
+    T_false = 267,
+    T_true = 268,
+    T_new = 269,
+    T_skip = 270,
+    T_decl = 271,
+    T_for = 272,
+    T_nil = 273,
+    T_tail = 274,
+    T_head = 275,
+    T_def = 276,
+    T_nilq = 277,
+    T_if = 278,
+    T_else = 279,
+    T_elsif = 280,
+    T_not = 281,
+    T_int = 282,
+    T_or = 283,
+    T_assign = 284,
+    T_ge = 285,
+    T_le = 286,
+    T_neq = 287,
+    T_constInt = 288,
+    T_var = 289,
+    T_constChar = 290,
+    T_constString = 291,
+    UPLUS = 292,
+    UMINUS = 293
   };
-  typedef enum yytokentype yytoken_kind_t;
 #endif
 
 /* Value type.  */
@@ -130,7 +124,7 @@ union YYSTYPE
 	int 						num;
 	const char 					*str;
 
-#line 134 "parser.hpp"
+#line 128 "parser.hpp"
 
 };
 typedef union YYSTYPE YYSTYPE;

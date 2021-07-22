@@ -2,7 +2,7 @@ import glob
 import os
 import subprocess
 
-path = '/home/akimonid/code/GinNTony/tests/Correct/'
+path = '/home/akimonid/GinNTony/tests/Correct/'
 errors = []
 nesting_links_errors = []
 for filename in glob.glob(os.path.join(path, '*.tony')):
