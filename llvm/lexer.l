@@ -15,59 +15,6 @@
 
 int commentLevel = 0;
 
-char *transformEscapeChars(char *str)
-{
-	char **x = (char **)malloc(sizeof(char *));
-	char *test = *x;
-	test = (char *)malloc(sizeof(char) * strlen(str));
-	// char test[strlen(str)];
-	int test_index = 0;	
-	for(size_t i=0;i<strlen(str);i++)
-	{
-		if (str[i] == '\\')
-		{
-			switch(str[i+1])
-			{
-				case 'n':  	
-					test[test_index++] = '\n';
-					i++;
-					break;
-				case 't': 	
-					test[test_index++] = '\t';
-					i++;
-					break;
-				case 'r': 	
-					test[test_index++] = '\r';
-					i++;
-					break;
-				case '0': 	
-					test[test_index++] = '\0';
-					i++;
-					break;
-				case '\\': 	
-					test[test_index++] = '\\';
-					i++;
-					break;
-				case '\'': 	
-					test[test_index++] = '\'';
-					i++;
-					break;
-				case '\"': 	
-					test[test_index++] = '\"';
-					i++;
-					break;
-				default:
-					test[test_index++] = str[i];
-					break;
-			}
-		}
-		else
-			test[test_index++] = str[i];
-	}
-	test[test_index] = '\0';
-
-	return test;
-}
 
 int getChar( char *chr)
 {
@@ -139,7 +86,7 @@ H 		\\x{HD}{HD}
 {D}+						{ yylval.num = atoi(yytext);  return T_constInt; }
 
 \'([^\'\\\"]|{E}|{H})\'		{ yylval.chr = getChar(yytext); return T_constChar; }
-\"([^\'\"\\\n]|{E}|{H})*\"	{ yylval.str = transformEscapeChars(yytext); return T_constString; }
+\"([^\'\"\\\n]|{E}|{H})*\"	{ yylval.str = strdup(yytext); return T_constString; }
 
 [+\-*/#=<>]					{ return yytext[0]; }
 [\(\)\[\],;:]				{ return yytext[0]; }

@@ -2,11 +2,11 @@ import glob
 import os
 import subprocess
 
-path = '/home/akimonid/GinNTony/tests/Correct/'
+path = '/home/akimonid/code/GinNTony/tests/Correct/'
 errors = []
 nesting_links_errors = []
 for filename in glob.glob(os.path.join(path, '*.tony')):
-    res = subprocess.run(['./GinNTony', filename], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    res = subprocess.run(['./GinNTony', '-o', filename], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     # print(res.returncode)
     if res.returncode == 69:
         nesting_links_errors.append(filename)

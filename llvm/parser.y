@@ -13,6 +13,8 @@
 
 extern FILE *yyin;
 
+bool optimize = false;
+
 
 // ST_SIZE must be a prime number
 #define 	ST_SIZE 	257
@@ -128,7 +130,7 @@ extern FILE *yyin;
 %%
 
 program:		
-		func_def						{ $1->sem(); $1->llvm_compile_and_dump(); }
+		func_def						{ $1->sem(); $1->llvm_compile_and_dump(optimize); }
 		;
 
 func_def:
@@ -284,26 +286,17 @@ expr:
 
 int main(int argc, char *argv[])
 {
-	// yydebug = 1;
-	// bool optimize = false;
-	// bool print_intermediate = false;
-	// bool print_asm = false;
-	// while ((char c = getopt (argc, argv, "fio")) != -1)
-	// {
-	// 	switch (c)
-	// 	{
-	// 	case 'f':
-	// 		print_asm = true;
-	// 		break;
-	// 	case 'i':
-	// 		print_asm = true;
-	// 		break;
-	// 	case 'o':
-	// 		optimize = true;
-	// 		break;
-	// 	}
-	// }
-	yyin = fopen(argv[1],"r");
+	char *filename;
+
+	for(int i=1; i<argc; i++)
+	{
+		if(strcmp(argv[i], "-o") == 0)
+			optimize = true;
+		else
+			filename = argv[i];
+	}
+	
+	yyin = fopen(filename,"r");
 	initSymbolTable(ST_SIZE);
 	openScope();
 	initPreBuiltFunctionsInST();

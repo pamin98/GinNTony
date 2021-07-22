@@ -132,7 +132,7 @@ LLVMScope::~LLVMScope() {}
 
 void LLVMScope::openScope() {
     this->functions.push_front( std::unordered_map<std::string, llvm::Function*>() );
-    this->functions_declared.push_front( std::unordered_map<std::string, llvm::Function*>() );
+    // this->functions_declared.push_front( std::unordered_map<std::string, llvm::Function*>() );
 }
 
 bool LLVMScope::empty()

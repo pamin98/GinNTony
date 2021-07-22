@@ -1,12 +1,16 @@
 .PHONY: clean distclean default
 
-LLVMCONFIG=llvm-config-12
+LLVMCONFIG=llvm-config
 
 CXX=c++
 CXXFLAGS=-Wall -g `$(LLVMCONFIG) --cxxflags`
 LDFLAGS=`$(LLVMCONFIG) --ldflags --system-libs --libs all`
+PYTHON=python
 
 default: GinNTony
+
+test:
+	$(PYTHON) run_tests.py
 
 lexer.cpp: lexer.l
 	flex -s -o lexer.cpp lexer.l
@@ -22,7 +26,7 @@ GinNTony: lexer.o parser.o
 	$(CXX) $(CXXFLAGS) -o GinNTony lexer.o parser.o error.cpp general.cpp symbol.cpp codegen.cpp  $(LDFLAGS)
 
 clean:
-	$(RM) lexer.cpp parser.cpp parser.hpp parser.output *.o 
+	$(RM) lexer.cpp parser.cpp parser.hpp parser.output *.o *.imm *.asm *.ll *.out *.s
 
 distclean: clean
 	$(RM) GinNTony

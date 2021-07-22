@@ -256,41 +256,45 @@ public:
 		return nullptr;
 	}
 
-	void llvm_compile_and_dump()
+	void llvm_compile_and_dump(bool optimize = false)
 	{
 		scopes.openScope();
 		TheModule = std::make_unique<llvm::Module>("program", TheContext);
 		TheFPM = std::make_unique<llvm::legacy::FunctionPassManager>(TheModule.get());
+	
+		if(optimize)
+		{
+			TheFPM->add(llvm::createPromoteMemoryToRegisterPass());
+			TheFPM->add(llvm::createMemCpyOptPass());
+			TheFPM->add(llvm::createInstructionCombiningPass());
+			// MINE 
+			TheFPM->add(llvm::createDeadCodeEliminationPass());
+			// ----
+			TheFPM->add(llvm::createReassociatePass());
+			TheFPM->add(llvm::createGVNPass());
+			TheFPM->add(llvm::createCFGSimplificationPass());
 
-
-		TheFPM->add(llvm::createPromoteMemoryToRegisterPass());
-		TheFPM->add(llvm::createMemCpyOptPass());
-		TheFPM->add(llvm::createInstructionCombiningPass());
-		// MINE 
-		TheFPM->add(llvm::createDeadCodeEliminationPass());
-		// ----
-		TheFPM->add(llvm::createReassociatePass());
-		TheFPM->add(llvm::createGVNPass());
-		TheFPM->add(llvm::createCFGSimplificationPass());
-		// TheFPM->add(llvm::createCorrelatedValuePropagationPass());
-		TheFPM->add(llvm::createDeadCodeEliminationPass());
-		// TheFPM->add(llvm::createDeadArgEliminationPass());
-		// TheFPM->add(llvm::createConstantMergePass());
-		// TheFPM->add(llvm::createGlobalDCEPass());
-		// TheFPM->add(llvm::createGlobalOptimizerPass());
-		TheFPM->add(llvm::createGVNPass());
-		TheFPM->add(llvm::createIndVarSimplifyPass());
-		TheFPM->add(llvm::createInstructionCombiningPass());
-		// TheFPM->add(llvm::createFunctionInliningPass());
-		TheFPM->add(llvm::createJumpThreadingPass());
-		TheFPM->add(llvm::createLICMPass());
-		TheFPM->add(llvm::createLoopDeletionPass());
-		TheFPM->add(llvm::createLoopIdiomPass());
-		TheFPM->add(llvm::createLoopUnrollPass());
-		TheFPM->add(llvm::createLoopUnswitchPass());
-		TheFPM->add(llvm::createSCCPPass());
-		// TheFPM->add(llvm::createStripDeadPrototypesPass());
-		TheFPM->add(llvm::createTailCallEliminationPass());
+			TheFPM->add(llvm::createCorrelatedValuePropagationPass());
+			
+			TheFPM->add(llvm::createDeadCodeEliminationPass());
+			// TheFPM->add(llvm::createDeadArgEliminationPass());
+			// TheFPM->add(llvm::createConstantMergePass());
+			// TheFPM->add(llvm::createGlobalDCEPass());
+			// TheFPM->add(llvm::createGlobalOptimizerPass());
+			TheFPM->add(llvm::createGVNPass());
+			TheFPM->add(llvm::createIndVarSimplifyPass());
+			TheFPM->add(llvm::createInstructionCombiningPass());
+			// TheFPM->add(llvm::createFunctionInliningPass());
+			TheFPM->add(llvm::createJumpThreadingPass());
+			TheFPM->add(llvm::createLICMPass());
+			TheFPM->add(llvm::createLoopDeletionPass());
+			TheFPM->add(llvm::createLoopIdiomPass());
+			TheFPM->add(llvm::createLoopUnrollPass());
+			TheFPM->add(llvm::createLoopUnswitchPass());
+			TheFPM->add(llvm::createSCCPPass());
+			// TheFPM->add(llvm::createStripDeadPrototypesPass());
+			TheFPM->add(llvm::createTailCallEliminationPass());
+		}
 		
 
 		TheFPM->doInitialization();
@@ -304,13 +308,15 @@ public:
 		{
 			std::cerr << std::endl << std::endl << "The IR is bad!" << std::endl;
 			TheModule->print(llvm::errs(), nullptr);
-			exit(1);
+			exit(-1);
 		}
 		else
 		{
-			TheFPM->run(*(this->f));
-			TheModule->print(llvm::outs(), nullptr);
 			std::error_code EC;
+			TheFPM->run(*(this->f));
+			llvm::raw_fd_ostream s("./module.s", EC, llvm::sys::fs::F_None);
+			// TheModule->print(llvm::outs(), nullptr);
+			TheModule->print(s, nullptr);
 			llvm::raw_fd_ostream OS("./module.imm", EC, llvm::sys::fs::F_None);
 			llvm::WriteBitcodeToFile(*TheModule, OS);
 			OS.flush();
@@ -885,8 +891,57 @@ public:
 	}
 
 	virtual llvm::Value *codegen() override
-	{
-		std::string s(str);
+	{	
+		char test[strlen(str)];
+		int test_index = 0;	
+		for(size_t i=0;i<strlen(str);i++)
+		{
+			if (str[i] == '\\')
+			{
+				switch(str[i+1])
+				{
+					case 'n':  	
+						test[test_index++] = '\n';
+						i++;
+						break;
+					case 't': 	
+						test[test_index++] = '\t';
+						i++;
+						break;
+					case 'r': 	
+						test[test_index++] = '\r';
+						i++;
+						break;
+					case '0': 	
+						test[test_index++] = '\0';
+						i++;
+						break;
+					case '\\': 	
+						test[test_index++] = '\\';
+						i++;
+						break;
+					case '\'': 	
+						test[test_index++] = '\'';
+						i++;
+						break;
+					case '\"': 	
+						test[test_index++] = '\"';
+						i++;
+						break;
+					default:
+						test[test_index++] = str[i];
+						break;
+				}
+			}
+			else
+				test[test_index++] = str[i];
+		}
+		test[test_index] = '\0';
+
+
+
+
+		std::string s(test);
 		s = s.substr(1, s.size() - 2);
 		
 
