@@ -41,5 +41,5 @@ void deallocate(void * p)
 
 
 
-const char * filename;
+char * filename;
 int lineno = 1;

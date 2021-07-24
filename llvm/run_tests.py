@@ -13,6 +13,8 @@ for filename in glob.glob(os.path.join(path, '*.tony')):
     if res.returncode != 0 and res.returncode != 69:
         errors.append(filename)
 
+os.system("rm *.imm *.s")
+
 print("This tests didn't run because nesting links were not implemented")
 print("=================================================================")
 for f in nesting_links_errors:

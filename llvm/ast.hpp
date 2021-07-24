@@ -59,39 +59,13 @@
 
 static void codegenLibs();
 
-enum relOp
-{
-	eq,
-	lt,
-	gt,
-	le,
-	ge,
-	neq
-};
+enum relOp { eq, lt, gt, le, ge, neq };
 
-enum logOp
-{
-	AND,
-	OR,
-	NOT,
-	TRUE,
-	FALSE
-};
+enum logOp{ AND, OR, NOT, TRUE, FALSE };
 
-enum listOp
-{
-	nil,
-	nilq,
-	head,
-	tail,
-	append
-};
+enum listOp{ nil, nilq, head, tail, append };
 
-enum HeaderType
-{
-	Func_Decl,
-	Func_Def
-};
+enum HeaderType{ Func_Decl, Func_Def };
 
 static llvm::LLVMContext TheContext;
 static llvm::IRBuilder<> Builder(TheContext);
@@ -256,7 +230,7 @@ public:
 		return nullptr;
 	}
 
-	void llvm_compile_and_dump(bool optimize = false)
+	void llvm_compile_and_dump(bool optimize = false, char *filename=NULL)
 	{
 		scopes.openScope();
 		TheModule = std::make_unique<llvm::Module>("program", TheContext);
@@ -267,31 +241,28 @@ public:
 			TheFPM->add(llvm::createPromoteMemoryToRegisterPass());
 			TheFPM->add(llvm::createMemCpyOptPass());
 			TheFPM->add(llvm::createInstructionCombiningPass());
-			// MINE 
 			TheFPM->add(llvm::createDeadCodeEliminationPass());
-			// ----
 			TheFPM->add(llvm::createReassociatePass());
 			TheFPM->add(llvm::createGVNPass());
 			TheFPM->add(llvm::createCFGSimplificationPass());
-
-			TheFPM->add(llvm::createCorrelatedValuePropagationPass());
-			
-			TheFPM->add(llvm::createDeadCodeEliminationPass());
 			// TheFPM->add(llvm::createDeadArgEliminationPass());
 			// TheFPM->add(llvm::createConstantMergePass());
+			TheFPM->add(llvm::createCorrelatedValuePropagationPass());
+			TheFPM->add(llvm::createDeadCodeEliminationPass());
 			// TheFPM->add(llvm::createGlobalDCEPass());
 			// TheFPM->add(llvm::createGlobalOptimizerPass());
 			TheFPM->add(llvm::createGVNPass());
 			TheFPM->add(llvm::createIndVarSimplifyPass());
 			TheFPM->add(llvm::createInstructionCombiningPass());
-			// TheFPM->add(llvm::createFunctionInliningPass());
 			TheFPM->add(llvm::createJumpThreadingPass());
+			// TheFPM->add(llvm::createFunctionInliningPass());
 			TheFPM->add(llvm::createLICMPass());
 			TheFPM->add(llvm::createLoopDeletionPass());
 			TheFPM->add(llvm::createLoopIdiomPass());
 			TheFPM->add(llvm::createLoopUnrollPass());
 			TheFPM->add(llvm::createLoopUnswitchPass());
 			TheFPM->add(llvm::createSCCPPass());
+			// TheFPM->add(llvm::createGlobalDCEPass());
 			// TheFPM->add(llvm::createStripDeadPrototypesPass());
 			TheFPM->add(llvm::createTailCallEliminationPass());
 		}
@@ -314,10 +285,12 @@ public:
 		{
 			std::error_code EC;
 			TheFPM->run(*(this->f));
-			llvm::raw_fd_ostream s("./module.s", EC, llvm::sys::fs::F_None);
-			// TheModule->print(llvm::outs(), nullptr);
+			std::string fname(filename);
+			fname = fname.substr(fname.find_last_of("/") + 1);
+			fname = fname.substr(0, fname.find(".tony") );
+			llvm::raw_fd_ostream s(fname + ".s", EC, llvm::sys::fs::F_None);
 			TheModule->print(s, nullptr);
-			llvm::raw_fd_ostream OS("./module.imm", EC, llvm::sys::fs::F_None);
+			llvm::raw_fd_ostream OS(fname + ".imm", EC, llvm::sys::fs::F_None);
 			llvm::WriteBitcodeToFile(*TheModule, OS);
 			OS.flush();
 		}
@@ -406,7 +379,8 @@ public:
 		if (e->entryType == ENTRY_FUNCTION)
 			error(this->semantic_line_no, "%s is a function, expected parenthesis", e->id);
 		type = e->eVariable.type;
-		// TODO MAYBE FOR LIST TOO
+
+		// This is used in codegen and includes lists as well
 		if (type->dtype == TYPE_IARRAY || type->dtype == TYPE_LIST)
 			this->isArray = true;
 
@@ -441,6 +415,7 @@ public:
 
 		if( index == NULL )
 		{
+			// If isRef and is not array or list, load the value. Otherwise, load the pointer.
 			if ( ar->isRef(var) && !isArray )
 				return Builder.CreateLoad(Builder.CreateLoad(ar->getAddr(var)));
 			else if (ar->isRef(var))
@@ -759,9 +734,6 @@ public:
 		if (activationRecordStack.size() != 0)
 			Builder.SetInsertPoint(activationRecordStack.front()->getCurrentBlock());
 
-		// if (!main)
-		// 	Builder.SetInsertPoint(activationRecordStack.front()->getCurrentBlock());
-
 		return nullptr;
 	}
 
@@ -894,6 +866,8 @@ public:
 	{	
 		char test[strlen(str)];
 		int test_index = 0;	
+
+		/* This for loop transforms pairs of chars to esc chars where needed */
 		for(size_t i=0;i<strlen(str);i++)
 		{
 			if (str[i] == '\\')
@@ -999,7 +973,7 @@ public:
 				argMismatch = true;
 				break;
 			}
-			// if expression is not variable and mode is reference error
+
 			e->type_check(paramType);
 			if(!e->checkVar() && args->eParameter.mode == PASS_BY_REFERENCE && (paramType == typeInteger || paramType == typeBoolean || paramType == typeChar))
 				error(this->semantic_line_no, "Only variables can be passed by reference.");
@@ -1109,7 +1083,6 @@ public:
 	virtual llvm::Value *codegen() override
 	{
 		return llvm::ConstantInt::get(llvm::Type::getInt32Ty(TheContext), num);
-		// return llvm::ConstantInt::get(i32, num);
 	}
 
 private:
@@ -1426,10 +1399,6 @@ public:
 		{
 			llvm::Value *nil_type = llvm::ConstantPointerNull::get(static_cast<llvm::PointerType *>(r->getType()));
 			return Builder.CreateICmpEQ(r, nil_type);
-			// if (llvm::ConstantPointerNull::classof(r))
-			// 	return llvm::ConstantInt::getTrue(TheContext);
-			// else
-			// 	return llvm::ConstantInt::getFalse(TheContext);
 		}
 
 		return nullptr;
@@ -1584,10 +1553,6 @@ public:
 	{
 		activationRecordStack.front()->addRet();
 		return Builder.CreateRet(Builder.CreateBitCast(this->returnExpr->codegen(), activationRecordStack.front()->getFunc()->getReturnType()  ));
-		// if( this->return_type->dtype == TYPE_LIST )
-		// 	return Builder.CreateRet(Builder.CreateBitCast(this->returnExpr->codegen(), translateType(this->return_type)));
-		// else
-		// 	return Builder.CreateRet(this->returnExpr->codegen());
 	}
 
 private:
@@ -1625,8 +1590,6 @@ public:
 			nextIf->sem();
 	}
 
-	// TODO while instead of recursive
-	// TODO check if setting basic blocks in AR is redundant
 	virtual llvm::Value *codegen() override
 	{
 		if (cond == NULL && stmt_list != NULL)
@@ -1634,9 +1597,8 @@ public:
 
 		llvm::Value *CondV = cond->codegen();
 
-		// Convert condition to a bool by comparing non-equal to 0.0.
+		// Convert condition to a bool by comparing non-equal to 0.
 		CondV = Builder.CreateICmpNE(CondV, c1(0), "if_cond");
-		// CondV = Builder.CreateFCmpONE(CondV, llvm::ConstantInt::get(TheContext, llvm::APFloat(0.0)), "ifcond");
 
 		llvm::Function *TheFunction = Builder.GetInsertBlock()->getParent();
 
@@ -1730,7 +1692,7 @@ public:
 		if (!CondV)
 			return nullptr;
 
-		// Convert condition to a bool by comparing non-equal to 0.0.
+		// Convert condition to a bool by comparing non-equal to 0.
 		CondV = Builder.CreateICmpNE(CondV, c1(0), "loopcond");
 
 		// Insert the conditional branch into the end of LoopEndBB.
@@ -1800,8 +1762,6 @@ void codegenLibs()
 	auto *strcatType = llvm::FunctionType::get(proc, std::vector<llvm::Type *>{i8->getPointerTo(), i8->getPointerTo()},false);
 	scopes.addFunc("strcat", llvm::Function::Create(strcatType, llvm::Function::ExternalLinkage, "strcat", TheModule.get()));
 	scopes.is_initialized = false;
-
-	// auto i64 = llvm::IntegerType::get(TheContext, 64);
 
 	llvm::FunctionType *malloc_type = llvm::FunctionType::get(llvm::PointerType::get(i32, 0), {i32}, false);
     TheMalloc = llvm::Function::Create(malloc_type, llvm::Function::ExternalLinkage, "GC_malloc", TheModule.get());

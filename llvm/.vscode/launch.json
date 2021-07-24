@@ -9,7 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "/home/akimonid/code/GinNTony/llvm/GinNTony",
-            "args": ["-o"],
+            "args": ["-o","../tests/Correct/01empty.tony"],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
             "environment": [],

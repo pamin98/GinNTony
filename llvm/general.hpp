@@ -23,7 +23,7 @@ void deallocate (void *);
 
 
 extern int lineno;
-extern const char * filename;
+extern char * filename;
 
 
 #endif

@@ -606,20 +606,6 @@ SymbolEntry *lookupEntry(const char *name, LookupType type, bool err, int line_n
     return NULL;
 }
 
-// Type typeArray(RepInteger size, Type refType)
-// {
-//     Type n = (Type)allocate(sizeof(struct Type_tag));
-
-//     n->dtype = TYPE_ARRAY;
-//     n->refType = refType;
-//     n->size = size;
-//     n->refCount = 1;
-
-//     refType->refCount++;
-
-//     return n;
-// }
-
 Type typeIArray(Type refType)
 {
     Type n = (Type)allocate(sizeof(struct Type_tag));

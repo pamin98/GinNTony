@@ -1,4 +1,3 @@
-
 #ifndef __CODEGEN_HPP__
 #define __CODEGEN_HPP__
 
@@ -8,9 +7,6 @@
 
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/BasicBlock.h>
-
-// #include "types.hpp"
-// #include "entry.hpp"
 
 #include "symbol.hpp"
 
@@ -27,7 +23,7 @@ class ActivationRecord
         std::unordered_map<std::string, llvm::Value*>       addresses;
         llvm::BasicBlock                                    *currentBB;
         bool                                                hasRet;
-        // deikti pros frame pointer
+
     public :
         ActivationRecord();
         ~ActivationRecord();

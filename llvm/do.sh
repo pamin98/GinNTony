@@ -6,8 +6,8 @@ print_asm=false;
 filename="";
 
 while (( "$#" )); do 
-    if [[ "$1" == "-o" ]]; then
-        optimize="-o"
+    if [[ "$1" == "-O" ]]; then
+        optimize="-O"
     elif [[ "$1" == "-f" ]]; then
         print_asm=true
     elif [[ "$1" == "-i" ]]; then
@@ -20,31 +20,33 @@ done
 
 ./GinNTony $optimize $filename
 
+filename=${filename##*/}
+IFS='.' read -r filename _ <<< "$filename"
+
 if [ $? -ne 0 ]; then
     echo "Error while compiling tony to LLVM IR"
 fi
 
 if [ "$print_ir" = true ] ; then
-    cat module.s
+    cat $filename.s
 fi
 
-llc module.imm -o module.asm
+llc $filename.imm -o $filename.asm
+mv $filename.s $filename.imm
 
 if [ $? -ne 0 ]; then
     echo "Error while compiling LLVM IR to ASM"
 fi
 
 if [ "$print_asm" = true ] ; then
-    cat module.asm
+    cat $filename.asm
 fi
 
-clang -o module.out module.asm lib.a -lgc
+clang -o $filename.out $filename.asm lib.a -lgc
 
 if [ $? -ne 0 ]; then
     echo "Error while linking with the GC and built in functions"
 fi
 
-rm module.s module.imm module.asm
-
-./module.out
+./$filename.out
 

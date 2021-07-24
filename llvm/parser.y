@@ -9,11 +9,11 @@
 #include "lexer.hpp"
 #include "symbol.hpp"
 
-// #define YYDEBUG 1
 
 extern FILE *yyin;
 
 bool optimize = false;
+extern char *filename;
 
 
 // ST_SIZE must be a prime number
@@ -130,7 +130,7 @@ bool optimize = false;
 %%
 
 program:		
-		func_def						{ $1->sem(); $1->llvm_compile_and_dump(optimize); }
+		func_def						{ $1->sem(); $1->llvm_compile_and_dump(optimize, filename); }
 		;
 
 func_def:
@@ -272,7 +272,6 @@ expr:
 		| "not" expr					{ $$ = new LogOp(NOT,NULL,$2); $$->set_line(yylineno);}
 		| expr "and" expr				{ $$ = new LogOp(AND,$1,$3); $$->set_line(yylineno);}
 		| expr "or" expr				{ $$ = new LogOp(OR,$1,$3); $$->set_line(yylineno);}
-		// | "new" type '[' expr ']' 		{ $$ = new ArrayInit($2,$4); $$->set_line(yylineno);}
 		| "nil"							{ $$ = new ListOp(nil,NULL,NULL); $$->set_line(yylineno);}
 		| "nil?" '(' expr ')'			{ $$ = new ListOp(nilq,NULL,$3); $$->set_line(yylineno);}
 		| expr '#' expr					{ $$ = new ListOp(append,$1,$3); $$->set_line(yylineno);}
@@ -282,15 +281,12 @@ expr:
 
 %%
 
-// const char * filename;
 
 int main(int argc, char *argv[])
 {
-	char *filename;
-
 	for(int i=1; i<argc; i++)
 	{
-		if(strcmp(argv[i], "-o") == 0)
+		if(strcmp(argv[i], "-O") == 0)
 			optimize = true;
 		else
 			filename = argv[i];
