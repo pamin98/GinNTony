@@ -1,8 +1,0 @@
-def dummy():
-	int num
-	def int funky_func () :
-		num := 2
-		return 42
-	end
-	num := funky_func()
-end
